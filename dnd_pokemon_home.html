@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Frostbound Harrow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --frost:      #a8d8ea;
+      --frost-dark: #5b9bb5;
+      --ice:        #d6eef8;
+      --ghost:      #9bb8c7;
+      --void:       #0a1520;
+      --gray:       #7a9aaa;
+    }
+
+    body {
+      background: var(--void);
+      color: var(--ice);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, #0d2535 0%, transparent 70%),
+        radial-gradient(ellipse 60% 80% at 20% 100%, #0a1e2e 0%, transparent 60%),
+        linear-gradient(175deg, #0a1520 0%, #0d1f30 40%, #091520 100%);
+      pointer-events: none;
+    }
+
+    /* ── Ghost glow ── */
+    .ghost-glow {
+      position: fixed; top: 15%; left: 50%;
+      transform: translateX(-50%);
+      width: 320px; height: 320px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(140,200,230,0.12) 0%, rgba(80,160,210,0.06) 40%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      animation: ghost-pulse 6s ease-in-out infinite;
+    }
+    @keyframes ghost-pulse {
+      0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+      50%       { opacity: 1;   transform: translateX(-50%) scale(1.08); }
+    }
+
+    /* ── Snow ── */
+    .snow-layer {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .flake {
+      position: absolute; top: -10px; border-radius: 50%;
+      background: rgba(220,240,255,0.7);
+      animation: drift linear infinite;
+    }
+    @keyframes drift {
+      0%   { transform: translateY(-10px) translateX(0); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(105vh) translateX(40px); opacity: 0; }
+    }
+
+    /* ── Top stripe ── */
+    .top-stripe {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 10px; z-index: 100;
+      background: linear-gradient(90deg, #1a5f7a, #3a9abf, #1a5f7a);
+    }
+    .top-stripe::after {
+      content: ''; position: absolute;
+      bottom: -3px; left: 0; right: 0; height: 3px;
+      background: rgba(168,216,234,0.4);
+    }
+
+    /* ── Snow toggle ── */
+    .snow-toggle {
+      position: fixed; bottom: 1.2rem; right: 1.2rem; z-index: 200;
+      background: rgba(13,30,43,0.85);
+      border: 1.5px solid rgba(168,216,234,0.3); border-radius: 10px;
+      padding: 6px 12px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      color: rgba(168,216,234,0.7); cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      backdrop-filter: blur(6px);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    .snow-toggle:hover { border-color: rgba(168,216,234,0.6); color: rgba(168,216,234,1); background: rgba(20,45,65,0.95); }
+    .snow-toggle.snow-off { opacity: 0.5; }
+
+    /* ── Wrap ── */
+    .wrap {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 3.5rem 1.5rem 2.5rem;
+      width: 100%; max-width: 680px;
+      animation: fade-up 0.8s ease both;
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Title ── */
+    .logo-area { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; text-align: center; }
+    .frost-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+    .frost-crystal { font-size: 18px; color: var(--frost); opacity: 0.7; animation: crystal-shimmer 3s ease-in-out infinite; }
+    .frost-crystal:nth-child(1) { animation-delay: 0s; }
+    .frost-crystal:nth-child(3) { animation-delay: 1.5s; }
+    @keyframes crystal-shimmer {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.15); }
+    }
+
+    .main-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(13px, 3.2vw, 22px);
+      color: var(--ice); text-align: center; line-height: 1.7;
+      text-shadow: 0 0 12px rgba(168,216,234,0.9), 0 0 28px rgba(100,180,220,0.5), 3px 3px 0 rgba(0,20,40,0.8);
+    }
+    .main-title .line2 {
+      color: var(--frost);
+      text-shadow: 0 0 16px rgba(168,216,234,1), 0 0 40px rgba(100,180,220,0.7), 2px 2px 0 rgba(0,20,40,0.9);
+    }
+    .subtitle { font-size: 13px; font-style: italic; color: var(--ghost); text-align: center; margin-top: 0.4rem; }
+
+    /* ── Divider ── */
+    .dex-divider { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; margin: 1.75rem 0; }
+    .dex-divider-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--frost-dark), transparent); }
+    .dex-divider-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--frost); border: 1.5px solid var(--frost-dark); box-shadow: 0 0 6px var(--frost); }
+    .dex-divider-dot.small { width: 5px; height: 5px; }
+
+    /* ── Cards ── */
+    .cards { display: flex; gap: 1.25rem; flex-wrap: wrap; justify-content: center; }
+
+    .card {
+      width: 210px;
+      padding: 1.75rem 1.5rem 1.5rem;
+      display: flex; flex-direction: column; align-items: center; gap: 0.85rem;
+      cursor: pointer;
+      position: relative; overflow: hidden; border-radius: 16px;
+      border: 1.5px solid rgba(168,216,234,0.25);
+      background: linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(168,216,234,0.04) 100%);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(168,216,234,0.15);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      animation: fade-up 0.6s ease both;
+      text-decoration: none;
+    }
+    .card:nth-child(1) { animation-delay: 0.2s; }
+    .card:nth-child(2) { animation-delay: 0.35s; }
+
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent 5%, var(--frost-dark) 30%, var(--frost) 50%, var(--frost-dark) 70%, transparent 95%);
+      opacity: 0.8;
+    }
+    .card::after {
+      content: ''; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+      background: linear-gradient(105deg, transparent, rgba(168,216,234,0.06), transparent);
+      transition: left 0.5s ease; pointer-events: none;
+    }
+    .card:hover { transform: translateY(-5px); border-color: rgba(168,216,234,0.5); box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(168,216,234,0.15); }
+    .card:hover::after { left: 120%; }
+    .card:active { transform: translateY(-1px); }
+
+    .card-title {
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      color: var(--ice); text-align: center; line-height: 1.8;
+      text-shadow: 0 0 10px rgba(168,216,234,0.5);
+      pointer-events: none;
+    }
+    .card-desc { font-size: 12px; color: var(--ghost); text-align: center; line-height: 1.55; pointer-events: none; }
+    .card-btn {
+      margin-top: 0.25rem;
+      background: rgba(168,216,234,0.12); color: var(--ice);
+      border: 1.5px solid rgba(168,216,234,0.35); border-radius: 8px;
+      padding: 8px 20px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer; width: 100%;
+      transition: background 0.18s, border-color 0.18s;
+      pointer-events: none; /* let parent card handle the click */
+    }
+    .card:hover .card-btn { background: rgba(168,216,234,0.22); border-color: rgba(168,216,234,0.65); }
+
+    /* ── Footer ── */
+    .footer { margin-top: 2.25rem; font-size: 11px; color: var(--gray); text-align: center; font-style: italic; animation: fade-up 0.6s 0.5s ease both; }
+    .footer strong { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--frost-dark); font-style: normal; }
+  </style>
+</head>
+<body>
+
+  <div class="top-stripe"></div>
+  <div class="ghost-glow" aria-hidden="true"></div>
+  <div class="snow-layer" id="snow-layer" aria-hidden="true"></div>
+
+  <button class="snow-toggle" id="snow-toggle" aria-label="Toggle snow">
+    <i class="ti ti-snowflake" aria-hidden="true"></i>
+    <span id="snow-label">SNOW ON</span>
+  </button>
+
+  <div class="wrap">
+    <div class="logo-area">
+      <div class="frost-row">
+        <span class="frost-crystal"><i class="ti ti-snowflake"></i></span>
+        <h1 class="main-title">The Frostbound<br/><span class="line2">Harrow</span></h1>
+        <span class="frost-crystal"><i class="ti ti-snowflake"></i></span>
+      </div>
+      <p class="subtitle">A Pokémon Themed Dungeons &amp; Dragons Campaign</p>
+    </div>
+
+    <div class="dex-divider" aria-hidden="true">
+      <div class="dex-divider-line"></div>
+      <div class="dex-divider-dot small"></div>
+      <div class="dex-divider-dot"></div>
+      <div class="dex-divider-dot small"></div>
+      <div class="dex-divider-line"></div>
+    </div>
+
+    <div class="cards">
+      <div class="card" id="btn-creator" role="button" tabindex="0" aria-label="Go to Character Creator">
+        <p class="card-title">Character<br/>Creator</p>
+        <p class="card-desc">Choose your trainer class, starter Pokémon &amp; stats</p>
+        <button class="card-btn" tabindex="-1">SELECT ›</button>
+      </div>
+
+      <div class="card" id="btn-sheet" role="button" tabindex="0" aria-label="Go to My Character sheet">
+        <p class="card-title">My<br/>Character</p>
+        <p class="card-desc">View your trainer sheet, Pokédex &amp; inventory</p>
+        <button class="card-btn" tabindex="-1">SELECT ›</button>
+      </div>
+    </div>
+
+    <p class="footer"><strong>v0.1.0</strong> &nbsp;·&nbsp; <span id="footer-tagline"></span></p>
+  </div>
+
+  <script>
+    // ── Taglines ──
+    var taglines = [
+      "The cold never sleeps.",
+      "Even Magikarp fear what stirs beneath the ice.",
+      "Something ancient has been woken. It is not happy.",
+      "Roll for Sanity. Fail for flavor.",
+      "Your starter is scared. You should be too.",
+      "Not all blizzards are natural.",
+      "The cult thought they were in control. They were wrong.",
+      "It's a Pokemon world. The horror is optional.",
+      "Somewhere in the snow, something remembers your name.",
+      "Pack a Burn Heal. You won't need it.",
+      "The storm doesn't end. It spreads.",
+      "The Pokedex has no entry for what's coming.",
+      "Gotta roll 'em all!",
+      "The journey of a thousand miles begins with a single Poke Ball.",
+      "Every trainer was a Village Sprout once. Some still are.",
+      "Your Pokemon believe in you. That has to count for something.",
+      "Adventure is out there -- and it brought snacks!",
+    ];
+    document.getElementById('footer-tagline').textContent = taglines[Math.floor(Math.random() * taglines.length)];
+
+    // ── Snow ──
+    var layer   = document.getElementById('snow-layer');
+    var snowBtn = document.getElementById('snow-toggle');
+    var snowLbl = document.getElementById('snow-label');
+    var snowOn  = true;
+    try { snowOn = localStorage.getItem('pd_snow') !== 'off'; } catch(e) {}
+
+    // Build flakes
+    for (var i = 0; i < 55; i++) {
+      var f = document.createElement('div');
+      f.className = 'flake';
+      var size = 1.5 + Math.random() * 3.5;
+      f.style.left              = Math.random() * 100 + 'vw';
+      f.style.width             = size + 'px';
+      f.style.height            = size + 'px';
+      f.style.animationDuration = (8 + Math.random() * 18) + 's';
+      f.style.animationDelay    = -(Math.random() * 20) + 's';
+      layer.appendChild(f);
+    }
+
+    function applySnow(on) {
+      snowOn = on;
+      layer.style.display = on ? '' : 'none';
+      snowLbl.textContent = on ? 'SNOW ON' : 'SNOW OFF';
+      snowBtn.classList.toggle('snow-off', !on);
+      try { localStorage.setItem('pd_snow', on ? 'on' : 'off'); } catch(e) {}
+    }
+    applySnow(snowOn);
+    snowBtn.addEventListener('click', function() { applySnow(!snowOn); });
+
+    // ── Navigation ──
+    document.getElementById('btn-creator').addEventListener('click', function() {
+      window.location.href = 'dnd_pokemon_class_select.html';
+    });
+    document.getElementById('btn-sheet').addEventListener('click', function() {
+      window.location.href = 'dnd_pokemon_character_sheet.html';
+    });
+
+    // Keyboard accessibility
+    document.querySelectorAll('.card').forEach(function(card) {
+      card.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+      });
+    });
+  </script>
+
+</body>
+</html>

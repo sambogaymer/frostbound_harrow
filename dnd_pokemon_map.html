@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battle Map — The Frostbound Harrow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <!-- ═══════════════════════════════════════════
+       FIREBASE CONFIG — replace these values with
+       your own from the Firebase console:
+       console.firebase.google.com → Project Settings
+       → Your apps → SDK setup → Config
+  ═══════════════════════════════════════════ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update, remove, push, onDisconnect }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // ── PASTE YOUR FIREBASE CONFIG HERE ──
+    const firebaseConfig = {
+      apiKey:            "PASTE_YOUR_API_KEY",
+      authDomain:        "PASTE_YOUR_AUTH_DOMAIN",
+      databaseURL:       "PASTE_YOUR_DATABASE_URL",
+      projectId:         "PASTE_YOUR_PROJECT_ID",
+      storageBucket:     "PASTE_YOUR_STORAGE_BUCKET",
+      messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID",
+      appId:             "PASTE_YOUR_APP_ID"
+    };
+    // ─────────────────────────────────────
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+
+    // ══════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════
+    let sessionId  = '';
+    let isDM       = false;
+    let myName     = '';
+    let myColor    = '#a8d8ea';
+    let myId       = 'u_' + Math.random().toString(36).slice(2, 9);
+
+    const GRID_W   = 40;   // columns
+    const GRID_H   = 30;   // rows
+    const CELL     = 40;   // px per cell
+
+    let pan        = { x: 0, y: 0 };
+    let scale      = 1;
+    let dragging   = false;
+    let dragStart  = null;
+    let panStart   = null;
+    let activeTool = 'select'; // select | fog | token | ping | erase
+    let fogMode    = 'hide';   // hide | reveal
+
+    // Local mirrors of Firebase data
+    let tokens     = {};   // id → { x, y, name, color, size }
+    let fog        = {};   // "col_row" → true (hidden)
+    let pings      = {};   // id → { x, y, color, ts }
+    let dragToken  = null; // { id, startX, startY }
+
+    // ══════════════════════════════════════
+    // DOM REFS (set after DOMContentLoaded)
+    // ══════════════════════════════════════
+    let canvas, ctx, overlay;
+
+    // ══════════════════════════════════════
+    // LOBBY
+    // ══════════════════════════════════════
+    function showLobby()  { document.getElementById('lobby').style.display  = 'flex'; }
+    function hideLobby()  { document.getElementById('lobby').style.display  = 'none'; }
+    function showMap()    { document.getElementById('map-ui').style.display = 'flex'; }
+
+    window.joinSession = async function() {
+      const nameEl  = document.getElementById('lobby-name');
+      const codeEl  = document.getElementById('lobby-code');
+      const dmEl    = document.getElementById('lobby-dm');
+      const passEl  = document.getElementById('lobby-pass');
+      const errEl   = document.getElementById('lobby-err');
+
+      myName    = nameEl.value.trim();
+      sessionId = codeEl.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      isDM      = dmEl.checked;
+      const dmPass = passEl.value.trim();
+
+      if (!myName)    { errEl.textContent = 'Enter your trainer name.';  return; }
+      if (!sessionId) { errEl.textContent = 'Enter a session code.'; return; }
+      if (isDM && dmPass !== 'HARROW') {
+        errEl.textContent = 'Incorrect DM password.'; return;
+      }
+
+      errEl.textContent = '';
+
+      // Pick a color for this user
+      const colors = ['#a8d8ea','#ff9741','#5FBD58','#FF6DA3','#F4D23C','#9b6ddb','#74CEC0','#D62828'];
+      myColor = colors[Math.floor(Math.random() * colors.length)];
+
+      hideLobby();
+      showMap();
+      initCanvas();
+      subscribeFirebase();
+      registerPresence();
+      updateToolbar();
+    };
+
+    // ══════════════════════════════════════
+    // FIREBASE SUBSCRIPTIONS
+    // ══════════════════════════════════════
+    function sessionRef(path) {
+      return ref(db, `sessions/${sessionId}/${path}`);
+    }
+
+    function subscribeFirebase() {
+      // Tokens
+      onValue(sessionRef('tokens'), snap => {
+        tokens = snap.val() || {};
+        redraw();
+      });
+
+      // Fog
+      onValue(sessionRef('fog'), snap => {
+        fog = snap.val() || {};
+        redraw();
+      });
+
+      // Pings
+      onValue(sessionRef('pings'), snap => {
+        pings = snap.val() || {};
+        redraw();
+        // Auto-remove pings older than 3 seconds
+        const now = Date.now();
+        Object.entries(pings).forEach(([id, p]) => {
+          if (now - p.ts > 3000) remove(ref(db, `sessions/${sessionId}/pings/${id}`));
+        });
+      });
+
+      // Online users (just for display)
+      onValue(sessionRef('users'), snap => {
+        const users = snap.val() || {};
+        const list = Object.values(users).map(u =>
+          `<span style="color:${u.color}">● ${u.name}${u.dm ? ' (DM)' : ''}</span>`
+        ).join('  ');
+        document.getElementById('online-list').innerHTML = list;
+      });
+    }
+
+    function registerPresence() {
+      const userRef = ref(db, `sessions/${sessionId}/users/${myId}`);
+      set(userRef, { name: myName, color: myColor, dm: isDM });
+      onDisconnect(userRef).remove();
+    }
+
+    // ══════════════════════════════════════
+    // CANVAS INIT
+    // ══════════════════════════════════════
+    function initCanvas() {
+      canvas  = document.getElementById('map-canvas');
+      overlay = document.getElementById('map-overlay');
+      ctx     = canvas.getContext('2d');
+      resize();
+      window.addEventListener('resize', resize);
+      bindCanvasEvents();
+      redraw();
+    }
+
+    function resize() {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      redraw();
+    }
+
+    // ══════════════════════════════════════
+    // DRAW
+    // ══════════════════════════════════════
+    function worldToScreen(wx, wy) {
+      return { x: wx * CELL * scale + pan.x, y: wy * CELL * scale + pan.y };
+    }
+    function screenToWorld(sx, sy) {
+      return {
+        x: (sx - pan.x) / (CELL * scale),
+        y: (sy - pan.y) / (CELL * scale)
+      };
+    }
+    function worldCell(sx, sy) {
+      const w = screenToWorld(sx, sy);
+      return { col: Math.floor(w.x), row: Math.floor(w.y) };
+    }
+
+    function redraw() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cs = CELL * scale;
+
+      // ── Grid lines ──
+      ctx.strokeStyle = 'rgba(168,216,234,0.15)';
+      ctx.lineWidth   = 0.5;
+      for (let col = 0; col <= GRID_W; col++) {
+        const x = col * cs + pan.x;
+        ctx.beginPath(); ctx.moveTo(x, pan.y); ctx.lineTo(x, GRID_H * cs + pan.y); ctx.stroke();
+      }
+      for (let row = 0; row <= GRID_H; row++) {
+        const y = row * cs + pan.y;
+        ctx.beginPath(); ctx.moveTo(pan.x, y); ctx.lineTo(GRID_W * cs + pan.x, y); ctx.stroke();
+      }
+
+      // ── Tokens ──
+      Object.values(tokens).forEach(t => drawToken(t));
+
+      // ── Fog ──
+      Object.keys(fog).forEach(key => {
+        const [col, row] = key.split('_').map(Number);
+        const s = worldToScreen(col, row);
+        ctx.fillStyle = 'rgba(10,21,32,0.92)';
+        ctx.fillRect(s.x, s.y, cs, cs);
+      });
+
+      // ── Pings ──
+      const now = Date.now();
+      Object.values(pings).forEach(p => {
+        const age   = now - p.ts;
+        const alpha = Math.max(0, 1 - age / 3000);
+        const s     = worldToScreen(p.x, p.y);
+        const r     = (18 + age / 100) * scale;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(168,216,234,${alpha})`;
+        ctx.lineWidth   = 2 * scale;
+        ctx.stroke();
+        ctx.fillStyle = `rgba(168,216,234,${alpha * 0.3})`;
+        ctx.fill();
+      });
+
+      // Coords overlay (DM only)
+      if (isDM) {
+        ctx.fillStyle = 'rgba(168,216,234,0.18)';
+        ctx.font = `${Math.max(8, 9 * scale)}px "Press Start 2P", monospace`;
+        if (scale > 0.6) {
+          for (let col = 0; col < GRID_W; col += 5) {
+            for (let row = 0; row < GRID_H; row += 5) {
+              const s = worldToScreen(col + 0.1, row + 0.15);
+              ctx.fillText(`${col},${row}`, s.x, s.y + 10 * scale);
+            }
+          }
+        }
+      }
+    }
+
+    function drawToken(t) {
+      if (!t) return;
+      const s  = worldToScreen(t.x, t.y);
+      const cs = CELL * scale;
+      const sz = (t.size || 1) * cs;
+      const r  = sz / 2;
+      const cx = s.x + r;
+      const cy = s.y + r;
+
+      // Shadow
+      ctx.beginPath();
+      ctx.arc(cx, cy + 2, r - 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fill();
+
+      // Circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
+      ctx.fillStyle = t.color || '#a8d8ea';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Initial letter
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(10, r * 0.8)}px Nunito, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText((t.name || '?')[0].toUpperCase(), cx, cy);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+
+      // Name label
+      if (scale > 0.5) {
+        ctx.fillStyle = 'rgba(214,238,248,0.9)';
+        ctx.font = `${Math.max(8, 10 * scale)}px Nunito, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(t.name || '', cx, s.y + sz + 12 * scale);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // ══════════════════════════════════════
+    // CANVAS EVENTS
+    // ══════════════════════════════════════
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const src  = e.touches ? e.touches[0] : e;
+      return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+    }
+
+    function bindCanvasEvents() {
+      // Mouse
+      canvas.addEventListener('mousedown',  onDown);
+      canvas.addEventListener('mousemove',  onMove);
+      canvas.addEventListener('mouseup',    onUp);
+      canvas.addEventListener('mouseleave', onUp);
+      canvas.addEventListener('wheel',      onWheel, { passive: false });
+      // Touch
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); onDown(e); }, { passive: false });
+      canvas.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e); }, { passive: false });
+      canvas.addEventListener('touchend',   e => { e.preventDefault(); onUp(e);   }, { passive: false });
+    }
+
+    function onDown(e) {
+      const pos = getPos(e);
+      dragging   = true;
+      dragStart  = pos;
+      panStart   = { ...pan };
+
+      if (activeTool === 'select') {
+        // Check if clicking a token
+        const hit = getTokenAt(pos.x, pos.y);
+        if (hit) {
+          dragToken = { id: hit.id, startX: pos.x, startY: pos.y, origX: hit.x, origY: hit.y };
+        }
+      }
+      if (activeTool === 'fog' && isDM) applyFog(pos);
+      if (activeTool === 'erase' && isDM) eraseFog(pos);
+      if (activeTool === 'ping') sendPing(pos);
+    }
+
+    function onMove(e) {
+      if (!dragging) return;
+      const pos = getPos(e);
+
+      if (activeTool === 'select' && dragToken) {
+        const dx = (pos.x - dragStart.x) / (CELL * scale);
+        const dy = (pos.y - dragStart.y) / (CELL * scale);
+        // Snap to grid as you drag
+        const newX = Math.round(dragToken.origX + dx);
+        const newY = Math.round(dragToken.origY + dy);
+        if (newX >= 0 && newX < GRID_W && newY >= 0 && newY < GRID_H) {
+          update(ref(db, `sessions/${sessionId}/tokens/${dragToken.id}`), { x: newX, y: newY });
+        }
+        return;
+      }
+
+      if (activeTool === 'fog'   && isDM && dragging) applyFog(pos);
+      if (activeTool === 'erase' && isDM && dragging) eraseFog(pos);
+
+      // Pan
+      if (activeTool === 'select' && !dragToken) {
+        pan.x = panStart.x + (pos.x - dragStart.x);
+        pan.y = panStart.y + (pos.y - dragStart.y);
+        redraw();
+      }
+    }
+
+    function onUp() {
+      dragging  = false;
+      dragToken = null;
+    }
+
+    function onWheel(e) {
+      e.preventDefault();
+      const pos    = getPos(e);
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      const newScale = Math.min(3, Math.max(0.25, scale * factor));
+      // Zoom toward cursor
+      pan.x = pos.x - (pos.x - pan.x) * (newScale / scale);
+      pan.y = pos.y - (pos.y - pan.y) * (newScale / scale);
+      scale = newScale;
+      redraw();
+    }
+
+    // ══════════════════════════════════════
+    // TOOLS
+    // ══════════════════════════════════════
+    function getTokenAt(sx, sy) {
+      const cs = CELL * scale;
+      for (const [id, t] of Object.entries(tokens)) {
+        const s  = worldToScreen(t.x, t.y);
+        const sz = (t.size || 1) * cs;
+        const dx = sx - (s.x + sz / 2);
+        const dy = sy - (s.y + sz / 2);
+        if (Math.sqrt(dx*dx + dy*dy) < sz / 2) return { id, ...t };
+      }
+      return null;
+    }
+
+    function applyFog(pos) {
+      const c = worldCell(pos.x, pos.y);
+      if (c.col < 0 || c.col >= GRID_W || c.row < 0 || c.row >= GRID_H) return;
+      const key = `${c.col}_${c.row}`;
+      if (fogMode === 'hide') {
+        set(ref(db, `sessions/${sessionId}/fog/${key}`), true);
+      } else {
+        remove(ref(db, `sessions/${sessionId}/fog/${key}`));
+      }
+    }
+
+    function eraseFog(pos) {
+      const c = worldCell(pos.x, pos.y);
+      const key = `${c.col}_${c.row}`;
+      remove(ref(db, `sessions/${sessionId}/fog/${key}`));
+    }
+
+    function sendPing(pos) {
+      const w = screenToWorld(pos.x, pos.y);
+      const pingRef = push(ref(db, `sessions/${sessionId}/pings`));
+      set(pingRef, { x: w.x, y: w.y, color: myColor, name: myName, ts: Date.now() });
+      // Auto-remove after 3.5 seconds
+      setTimeout(() => remove(pingRef), 3500);
+    }
+
+    // ══════════════════════════════════════
+    // PUBLIC TOOL ACTIONS (called from HTML)
+    // ══════════════════════════════════════
+    window.setTool = function(tool) {
+      activeTool = tool;
+      updateToolbar();
+    };
+
+    window.setFogMode = function(mode) {
+      fogMode = mode;
+      updateToolbar();
+    };
+
+    window.fillAllFog = function() {
+      if (!isDM) return;
+      const updates = {};
+      for (let col = 0; col < GRID_W; col++) {
+        for (let row = 0; row < GRID_H; row++) {
+          updates[`${col}_${row}`] = true;
+        }
+      }
+      set(ref(db, `sessions/${sessionId}/fog`), updates);
+    };
+
+    window.clearAllFog = function() {
+      if (!isDM) return;
+      remove(ref(db, `sessions/${sessionId}/fog`));
+    };
+
+    window.addToken = function() {
+      const nameEl  = document.getElementById('token-name');
+      const colorEl = document.getElementById('token-color');
+      const sizeEl  = document.getElementById('token-size');
+      const name    = nameEl.value.trim() || 'Token';
+      const color   = colorEl.value;
+      const size    = parseFloat(sizeEl.value) || 1;
+
+      const tokenRef = push(ref(db, `sessions/${sessionId}/tokens`));
+      set(tokenRef, { name, color, size, x: 1, y: 1 });
+      nameEl.value = '';
+    };
+
+    window.removeToken = function(id) {
+      remove(ref(db, `sessions/${sessionId}/tokens/${id}`));
+    };
+
+    window.resetView = function() {
+      pan   = { x: 40, y: 40 };
+      scale = 1;
+      redraw();
+    };
+
+    function updateToolbar() {
+      ['select','fog','erase','ping'].forEach(t => {
+        const btn = document.getElementById('tool-' + t);
+        if (btn) btn.classList.toggle('active', activeTool === t);
+      });
+      const fogPanel = document.getElementById('fog-panel');
+      if (fogPanel) fogPanel.style.display = (activeTool === 'fog' && isDM) ? 'flex' : 'none';
+      const dmPanel = document.getElementById('dm-panel');
+      if (dmPanel) dmPanel.style.display = isDM ? 'flex' : 'none';
+      const tokenListEl = document.getElementById('token-list');
+      if (tokenListEl) refreshTokenList();
+    }
+
+    function refreshTokenList() {
+      const el = document.getElementById('token-list');
+      if (!el) return;
+      el.innerHTML = '';
+      Object.entries(tokens).forEach(([id, t]) => {
+        const row = document.createElement('div');
+        row.className = 'token-list-row';
+        row.innerHTML =
+          `<span class="token-dot" style="background:${t.color}"></span>` +
+          `<span class="token-list-name">${t.name}</span>` +
+          (isDM ? `<button class="token-del" onclick="removeToken('${id}')"><i class="ti ti-trash"></i></button>` : '');
+        el.appendChild(row);
+      });
+    }
+
+    // keep token list in sync
+    setInterval(() => { if (sessionId) refreshTokenList(); }, 1000);
+
+    // Ping animation loop
+    setInterval(() => { if (Object.keys(pings).length > 0) redraw(); }, 50);
+
+    // ══════════════════════════════════════
+    // DOMContentLoaded
+    // ══════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+      showLobby();
+    });
+
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --frost:      #a8d8ea;
+      --frost-dark: #5b9bb5;
+      --ice:        #d6eef8;
+      --ghost:      #7bafc8;
+      --void:       #0d1e2b;
+      --gray:       #7bafc8;
+      --gray-lt:    #2e4a5e;
+      --red:        #E3350D;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: linear-gradient(175deg, #0d1e2b 0%, #0f2235 60%, #091825 100%);
+      color: var(--ice);
+      font-family: 'Nunito', sans-serif;
+    }
+
+    /* ── Top stripe ── */
+    .top-stripe {
+      position: fixed; top: 0; left: 0; right: 0; height: 10px; z-index: 300;
+      background: linear-gradient(90deg, #1a5f7a, #3a9abf, #1a5f7a);
+    }
+    .top-stripe::after {
+      content: ''; position: absolute; bottom: -3px; left: 0; right: 0; height: 3px;
+      background: rgba(168,216,234,0.35);
+    }
+
+    /* ══════════════════ LOBBY ══════════════════ */
+    #lobby {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(175deg, #0d1e2b 0%, #091825 100%);
+    }
+
+    .lobby-card {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(168,216,234,0.25);
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 30px rgba(58,154,191,0.1);
+      padding: 2rem 2.25rem;
+      width: min(440px, 94vw);
+      display: flex; flex-direction: column; gap: 1rem;
+      position: relative; overflow: hidden;
+    }
+    .lobby-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--frost-dark), var(--frost), var(--frost-dark), transparent);
+    }
+
+    .lobby-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(10px, 2.5vw, 14px);
+      color: var(--frost);
+      text-shadow: 0 0 14px rgba(168,216,234,0.7), 2px 2px 0 rgba(0,20,40,0.9);
+      text-align: center; line-height: 1.6;
+    }
+    .lobby-sub { font-size: 12px; color: var(--ghost); text-align: center; font-style: italic; }
+
+    .lobby-divider { height: 1px; background: rgba(168,216,234,0.15); }
+
+    .lobby-field { display: flex; flex-direction: column; gap: 5px; }
+    .lobby-field label {
+      font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--ghost);
+    }
+    .lobby-input {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(168,216,234,0.2);
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif; font-size: 14px; color: var(--ice);
+      transition: border-color 0.15s;
+    }
+    .lobby-input:focus { outline: none; border-color: var(--frost); }
+    .lobby-input::placeholder { color: rgba(168,216,234,0.25); }
+
+    .lobby-checkbox-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--ghost); cursor: pointer;
+    }
+    .lobby-checkbox-row input { accent-color: var(--frost-dark); width: 16px; height: 16px; cursor: pointer; }
+
+    .lobby-btn {
+      background: rgba(58,154,191,0.25); color: var(--ice);
+      border: 1.5px solid rgba(168,216,234,0.4); border-radius: 10px;
+      padding: 10px; width: 100%;
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      cursor: pointer; letter-spacing: 0.04em;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .lobby-btn:hover { background: var(--frost-dark); border-color: var(--frost); }
+
+    .lobby-err {
+      font-size: 11px; color: #f08080; text-align: center;
+      font-family: 'Press Start 2P', monospace; min-height: 14px;
+    }
+
+    .lobby-hint {
+      font-size: 11px; color: rgba(168,216,234,0.35);
+      text-align: center; font-style: italic; line-height: 1.6;
+    }
+    .lobby-hint strong { color: rgba(168,216,234,0.6); font-style: normal; }
+
+    /* ══════════════════ MAP UI ══════════════════ */
+    #map-ui {
+      display: none;
+      flex-direction: column;
+      height: 100vh; padding-top: 10px;
+    }
+
+    /* ── Top bar ── */
+    .map-topbar {
+      height: 44px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px;
+      background: rgba(13,30,43,0.95);
+      border-bottom: 1px solid rgba(168,216,234,0.15);
+      z-index: 10;
+    }
+
+    .map-title {
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      color: var(--frost);
+      text-shadow: 0 0 8px rgba(168,216,234,0.5);
+      white-space: nowrap; margin-right: 4px;
+    }
+
+    .tool-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(168,216,234,0.2);
+      border-radius: 7px; padding: 5px 10px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      color: var(--ghost); cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      transition: background 0.13s, color 0.13s, border-color 0.13s;
+      white-space: nowrap;
+    }
+    .tool-btn i { font-size: 15px; }
+    .tool-btn:hover { background: rgba(168,216,234,0.1); color: var(--ice); border-color: rgba(168,216,234,0.4); }
+    .tool-btn.active { background: var(--frost-dark); color: var(--ice); border-color: var(--frost); }
+    .tool-btn.danger { border-color: rgba(214,40,40,0.4); }
+    .tool-btn.danger:hover { background: rgba(214,40,40,0.2); color: #f08080; }
+
+    .topbar-sep { width: 1px; height: 24px; background: rgba(168,216,234,0.15); margin: 0 2px; flex-shrink: 0; }
+
+    #fog-panel { display: none; align-items: center; gap: 6px; }
+
+    .online-bar {
+      margin-left: auto; font-size: 11px; display: flex; align-items: center; gap: 8px;
+      white-space: nowrap; overflow: hidden;
+    }
+    #online-list { font-size: 11px; display: flex; gap: 10px; }
+
+    /* ── Main area ── */
+    .map-body {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* ── Canvas ── */
+    .canvas-wrap {
+      flex: 1; position: relative; overflow: hidden;
+      background: #091520;
+      cursor: crosshair;
+    }
+    .canvas-wrap.tool-select  { cursor: grab; }
+    .canvas-wrap.tool-select:active { cursor: grabbing; }
+    .canvas-wrap.tool-ping    { cursor: cell; }
+
+    #map-canvas { width: 100%; height: 100%; display: block; }
+
+    /* ── Sidebar ── */
+    .map-sidebar {
+      width: 220px; flex-shrink: 0;
+      background: rgba(13,30,43,0.95);
+      border-left: 1px solid rgba(168,216,234,0.12);
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--frost-dark) transparent;
+    }
+
+    .sidebar-section {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(168,216,234,0.1);
+    }
+    .sidebar-section-title {
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      color: var(--ghost); margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sidebar-section-title i { font-size: 13px; }
+
+    /* Add token form */
+    .token-form { display: flex; flex-direction: column; gap: 6px; }
+    .token-form input[type="text"] {
+      padding: 5px 8px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(168,216,234,0.2); border-radius: 6px;
+      font-size: 12px; color: var(--ice); font-family: 'Nunito',sans-serif;
+    }
+    .token-form input[type="text"]::placeholder { color: rgba(168,216,234,0.3); }
+    .token-form input[type="text"]:focus { outline: none; border-color: var(--frost); }
+    .token-form-row { display: flex; gap: 6px; align-items: center; }
+    .token-form-row label { font-size: 10px; color: var(--ghost); white-space: nowrap; }
+    .token-form-row input[type="color"] {
+      width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(168,216,234,0.2);
+      padding: 2px; background: rgba(255,255,255,0.06); cursor: pointer;
+    }
+    .token-form-row select {
+      flex: 1; padding: 4px 6px; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(168,216,234,0.2); border-radius: 6px;
+      font-size: 11px; color: var(--ice); font-family: 'Nunito',sans-serif;
+    }
+    .token-form-row select option { background: #0d1e2b; }
+    .add-token-btn {
+      background: rgba(58,154,191,0.2); color: var(--ice);
+      border: 1px solid rgba(168,216,234,0.3); border-radius: 6px;
+      padding: 6px; font-family: 'Press Start 2P',monospace; font-size: 7px;
+      cursor: pointer; width: 100%;
+      transition: background 0.13s;
+    }
+    .add-token-btn:hover { background: var(--frost-dark); }
+
+    /* Token list */
+    #token-list { display: flex; flex-direction: column; gap: 4px; }
+    .token-list-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 6px; border-radius: 6px;
+      background: rgba(255,255,255,0.04);
+      font-size: 12px; color: var(--ice);
+    }
+    .token-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .token-list-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .token-del {
+      background: none; border: none; color: rgba(168,216,234,0.3);
+      cursor: pointer; font-size: 13px; padding: 0; line-height: 1;
+      transition: color 0.12s;
+    }
+    .token-del:hover { color: var(--red); }
+
+    /* DM fog controls */
+    #dm-panel { display: none; flex-direction: column; gap: 6px; }
+    .fog-btn-row { display: flex; gap: 6px; }
+    .fog-btn {
+      flex: 1; padding: 6px 4px; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(168,216,234,0.2); border-radius: 6px;
+      font-family: 'Press Start 2P',monospace; font-size: 6px; color: var(--ghost);
+      cursor: pointer; transition: background 0.13s;
+      white-space: nowrap;
+    }
+    .fog-btn:hover { background: rgba(168,216,234,0.1); color: var(--ice); }
+    .fog-btn.danger:hover { background: rgba(214,40,40,0.15); color: #f08080; }
+
+    /* Help text */
+    .help-text { font-size: 11px; color: rgba(168,216,234,0.4); font-style: italic; line-height: 1.6; }
+
+    /* ── Bottom bar ── */
+    .map-bottombar {
+      height: 28px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 12px;
+      background: rgba(13,30,43,0.9);
+      border-top: 1px solid rgba(168,216,234,0.1);
+      font-size: 10px; color: rgba(168,216,234,0.4);
+      font-family: 'Press Start 2P',monospace;
+    }
+
+    /* ── Firebase config warning ── */
+    .config-warning {
+      position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+      background: rgba(214,40,40,0.15); border: 1px solid rgba(214,40,40,0.4);
+      border-radius: 8px; padding: 8px 16px;
+      font-size: 11px; color: #f08080; text-align: center; z-index: 500;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="top-stripe"></div>
+<div class="config-warning" id="config-warning">
+  ⚠ Firebase not configured — map changes won't sync. See comments in the HTML to add your config.
+</div>
+
+<!-- ══════════════════ LOBBY ══════════════════ -->
+<div id="lobby">
+  <div class="lobby-card">
+    <p class="lobby-title">Battle Map</p>
+    <p class="lobby-sub">The Frostbound Harrow</p>
+    <div class="lobby-divider"></div>
+
+    <div class="lobby-field">
+      <label>YOUR TRAINER NAME</label>
+      <input class="lobby-input" id="lobby-name" type="text" placeholder="Enter your name…" maxlength="20" />
+    </div>
+
+    <div class="lobby-field">
+      <label>SESSION CODE</label>
+      <input class="lobby-input" id="lobby-code" type="text" placeholder="e.g. HARROW01" maxlength="16"
+        style="text-transform:uppercase; letter-spacing:0.1em;" />
+    </div>
+
+    <div class="lobby-checkbox-row">
+      <input type="checkbox" id="lobby-dm" />
+      <label for="lobby-dm">I am the Dungeon Master</label>
+    </div>
+
+    <div class="lobby-field" id="dm-pass-field" style="display:none">
+      <label>DM PASSWORD</label>
+      <input class="lobby-input" id="lobby-pass" type="password" placeholder="Enter DM password…" />
+    </div>
+
+    <p class="lobby-err" id="lobby-err"></p>
+    <button class="lobby-btn" onclick="joinSession()">ENTER SESSION ›</button>
+
+    <p class="lobby-hint">
+      All players in the same session enter the <strong>same session code</strong>.<br/>
+      DM password is: <strong>HARROW</strong>
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════ MAP UI ══════════════════ -->
+<div id="map-ui">
+
+  <!-- Top toolbar -->
+  <div class="map-topbar">
+    <span class="map-title">BATTLE MAP</span>
+    <div class="topbar-sep"></div>
+
+    <button class="tool-btn" id="tool-select" onclick="setTool('select')">
+      <i class="ti ti-pointer"></i>PAN
+    </button>
+    <button class="tool-btn" id="tool-ping" onclick="setTool('ping')">
+      <i class="ti ti-map-pin"></i>PING
+    </button>
+    <button class="tool-btn" id="tool-fog" onclick="setTool('fog')">
+      <i class="ti ti-cloud"></i>FOG
+    </button>
+    <button class="tool-btn" id="tool-erase" onclick="setTool('erase')">
+      <i class="ti ti-eraser"></i>REVEAL
+    </button>
+
+    <!-- Fog sub-controls (DM only, shown when fog tool active) -->
+    <div id="fog-panel">
+      <div class="topbar-sep"></div>
+      <button class="tool-btn" onclick="setFogMode('hide')" id="fogmode-hide">
+        <i class="ti ti-eye-off"></i>HIDE
+      </button>
+      <button class="tool-btn" onclick="setFogMode('reveal')" id="fogmode-reveal">
+        <i class="ti ti-eye"></i>REVEAL
+      </button>
+      <button class="tool-btn danger" onclick="fillAllFog()">
+        <i class="ti ti-cloud-filled"></i>FOG ALL
+      </button>
+      <button class="tool-btn danger" onclick="clearAllFog()">
+        <i class="ti ti-sun"></i>CLEAR ALL
+      </button>
+    </div>
+
+    <div class="topbar-sep"></div>
+    <button class="tool-btn" onclick="resetView()"><i class="ti ti-home"></i>RESET VIEW</button>
+
+    <div class="online-bar">
+      <span style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--ghost)">ONLINE:</span>
+      <div id="online-list"></div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="map-body">
+
+    <!-- Canvas -->
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="map-canvas"></canvas>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="map-sidebar">
+
+      <!-- Tokens section -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-title"><i class="ti ti-circle-filled"></i>TOKENS</p>
+        <div class="token-form">
+          <input type="text" id="token-name" placeholder="Token name…" maxlength="16" />
+          <div class="token-form-row">
+            <label>Color</label>
+            <input type="color" id="token-color" value="#a8d8ea" />
+            <label>Size</label>
+            <select id="token-size">
+              <option value="1">Small (1×1)</option>
+              <option value="2">Large (2×2)</option>
+              <option value="3">Huge (3×3)</option>
+            </select>
+          </div>
+          <button class="add-token-btn" onclick="addToken()">
+            <i class="ti ti-plus"></i> PLACE TOKEN
+          </button>
+        </div>
+      </div>
+
+      <!-- Token list -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-title"><i class="ti ti-list"></i>ON THE FIELD</p>
+        <div id="token-list"></div>
+      </div>
+
+      <!-- DM controls -->
+      <div class="sidebar-section" id="dm-panel">
+        <p class="sidebar-section-title"><i class="ti ti-eye-off"></i>FOG OF WAR</p>
+        <div class="fog-btn-row">
+          <button class="fog-btn" onclick="fillAllFog()">COVER ALL</button>
+          <button class="fog-btn danger" onclick="clearAllFog()">CLEAR ALL</button>
+        </div>
+        <p class="help-text" style="margin-top:6px">
+          Select the FOG tool above then paint to hide or reveal cells.
+        </p>
+      </div>
+
+      <!-- Help -->
+      <div class="sidebar-section">
+        <p class="sidebar-section-title"><i class="ti ti-info-circle"></i>CONTROLS</p>
+        <p class="help-text">
+          <strong style="color:var(--ice)">Scroll</strong> — zoom in/out<br/>
+          <strong style="color:var(--ice)">PAN tool drag</strong> — move view<br/>
+          <strong style="color:var(--ice)">Token drag</strong> — move token<br/>
+          <strong style="color:var(--ice)">PING</strong> — click to signal<br/>
+          <strong style="color:var(--ice)">FOG</strong> — paint fog (DM)<br/>
+          <strong style="color:var(--ice)">REVEAL</strong> — erase fog (DM)
+        </p>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="map-bottombar">
+    <span id="bottom-session">SESSION: —</span>
+    <span id="bottom-role">—</span>
+    <span id="bottom-tool">TOOL: SELECT</span>
+  </div>
+
+</div>
+
+<script>
+  // ── Show/hide DM password field ──
+  document.getElementById('lobby-dm').addEventListener('change', function() {
+    document.getElementById('dm-pass-field').style.display = this.checked ? 'flex' : 'none';
+  });
+
+  // ── Uppercase session code as typed ──
+  document.getElementById('lobby-code').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+
+  // ── Enter key submits lobby ──
+  ['lobby-name','lobby-code','lobby-pass'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') joinSession();
+    });
+  });
+
+  // ── Update bottom bar periodically ──
+  setInterval(function() {
+    const sessionSpan = document.getElementById('bottom-session');
+    const roleSpan    = document.getElementById('bottom-role');
+    if (sessionSpan && typeof sessionId !== 'undefined' && sessionId) {
+      sessionSpan.textContent = 'SESSION: ' + sessionId;
+    }
+    if (roleSpan && typeof isDM !== 'undefined') {
+      roleSpan.textContent = isDM ? 'DM MODE' : 'PLAYER MODE';
+    }
+  }, 500);
+
+  // ── Check for unconfigured Firebase ──
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      const warning = document.getElementById('config-warning');
+      if (warning && document.querySelector('script[type="module"]')) {
+        // Check if config is still placeholder
+        const scriptContent = document.querySelector('script[type="module"]').textContent;
+        if (scriptContent.includes('PASTE_YOUR_API_KEY')) {
+          warning.style.display = 'block';
+        }
+      }
+    }, 500);
+  });
+</script>
+
+</body>
+</html>

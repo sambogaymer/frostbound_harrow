@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon & Dragons — Character Sheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:       #E3350D;
+      --red-dark:  #b02a0a;
+      --white:     #FAFAFA;
+      --off-white: #F0EDE8;
+      --black:     #1a1a1a;
+      --gray:      #6b6b6b;
+      --gray-lt:   #d4d0c8;
+    }
+    body { background: var(--off-white); color: var(--black); font-family: 'Nunito', sans-serif; min-height: 100vh; }
+
+    /* ── Top stripe ── */
+    .top-stripe { position: fixed; top:0; left:0; right:0; height:10px; background:var(--red); z-index:100; }
+    .top-stripe::after { content:''; position:absolute; bottom:-4px; left:0; right:0; height:4px; background:var(--black); }
+
+    /* ── Pokéball watermark ── */
+    .pokeball-bg { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:500px; height:500px; opacity:0.04; pointer-events:none; animation:slow-spin 60s linear infinite; z-index:0; }
+    @keyframes slow-spin { to { transform:translate(-50%,-50%) rotate(360deg); } }
+    @keyframes fade-up { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+    .page { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:4rem 1.25rem 3rem; }
+
+    /* ════════════════════════════════
+       HERO BANNER
+    ════════════════════════════════ */
+    .hero-banner {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 14px;
+      box-shadow: 4px 4px 0 var(--black);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      animation: fade-up 0.4s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::before { content:''; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--red); border-radius:11px 0 0 11px; }
+
+    .hero-avatar {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: 3px solid var(--black);
+      background: var(--off-white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; color: var(--gray);
+      flex-shrink: 0; margin-left: 6px;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .hero-avatar:hover { border-color: var(--red); }
+    .hero-avatar:hover::after {
+      content: '\EB2B'; /* ti-camera icon codepoint */
+      font-family: 'tabler-icons';
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.45);
+      color: #fff; font-size: 22px;
+      border-radius: 50%;
+    }
+    .hero-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+    /* ── Crop modal overlay ── */
+    .crop-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.75);
+      align-items: center; justify-content: center;
+    }
+    .crop-overlay.visible { display: flex; }
+
+    .crop-modal {
+      background: var(--white);
+      border: 3px solid var(--black);
+      border-radius: 16px;
+      box-shadow: 6px 6px 0 var(--black);
+      width: min(480px, 94vw);
+      padding: 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      position: relative;
+    }
+
+    .crop-modal-title {
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      color: var(--red); text-shadow: 1px 1px 0 var(--red-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .crop-close {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; font-size: 20px;
+      color: var(--gray); cursor: pointer; line-height:1;
+      transition: color 0.13s;
+    }
+    .crop-close:hover { color: var(--red); }
+
+    /* canvas wrapper — fixed square with clip */
+    .crop-canvas-wrap {
+      width: 100%; aspect-ratio: 1;
+      overflow: hidden; border-radius: 12px;
+      border: 2px solid var(--black);
+      background: #111;
+      position: relative; cursor: grab;
+    }
+    .crop-canvas-wrap:active { cursor: grabbing; }
+    #crop-canvas { display: block; width: 100%; height: 100%; }
+
+    /* circle overlay drawn in CSS so user can see the crop circle */
+    .crop-canvas-wrap::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.45);
+      --r: calc(min(100%, 100%) / 2 - 8px);
+      /* punch out the circle with a radial gradient mask */
+      mask-image: radial-gradient(circle calc(var(--r)) at 50% 50%, transparent 99%, black 100%);
+      -webkit-mask-image: radial-gradient(circle calc(var(--r)) at 50% 50%, transparent 99%, black 100%);
+      pointer-events: none;
+    }
+
+    .crop-controls {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .crop-zoom-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); white-space:nowrap; }
+    #crop-zoom { flex:1; }
+
+    .crop-actions { display:flex; gap:8px; }
+    .crop-btn {
+      flex:1; padding: 9px 0;
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      border-radius: 8px; cursor: pointer;
+      border: 2px solid var(--black);
+      box-shadow: 2px 2px 0 var(--black);
+      transition: transform 0.1s, box-shadow 0.1s, background 0.13s;
+    }
+    .crop-btn:active { transform:translate(1px,1px); box-shadow:none; }
+    .crop-btn-cancel { background: var(--off-white); color: var(--black); }
+    .crop-btn-cancel:hover { background: var(--gray-lt); }
+    .crop-btn-confirm { background: var(--red); color: #fff; }
+    .crop-btn-confirm:hover { background: var(--red-dark); }
+    .hero-info { flex: 1; }
+    .hero-name { font-family: 'Press Start 2P', monospace; font-size: clamp(10px,2vw,15px); color: var(--black); line-height: 1.4; }
+    .hero-sub  { font-size: 13px; color: var(--gray); font-style: italic; margin-top: 3px; }
+
+    .hero-badges { display:flex; gap:8px; flex-wrap:wrap; }
+    .hero-badge {
+      font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 3px 10px; border-radius: 999px; color: #fff;
+    }
+
+    .rest-btns { display:flex; gap:8px; flex-shrink:0; }
+    .rest-btn {
+      background: var(--black); color: var(--white);
+      border: 2px solid var(--black); border-radius: 8px;
+      padding: 6px 12px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      box-shadow: 2px 2px 0 #555;
+      transition: background 0.13s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .rest-btn:hover { background: var(--red); transform: translate(-1px,-1px); }
+
+    /* ════════════════════════════════
+       STAT BAR
+    ════════════════════════════════ */
+    .stat-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-bottom: 1rem;
+      animation: fade-up 0.4s 0.08s ease both;
+    }
+    .stat-box {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 12px;
+      box-shadow: 3px 3px 0 var(--black);
+      padding: 0.6rem 0.5rem 0.7rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--sc); }
+    .stat-abbr { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); letter-spacing:0.05em; margin-bottom:4px; }
+    .stat-mod  { font-family:'Press Start 2P',monospace; font-size:clamp(16px,3vw,22px); color:var(--black); line-height:1; }
+    .stat-score-chip {
+      display: inline-block; margin-top: 5px;
+      background: var(--sc); color: #fff;
+      font-family:'Press Start 2P',monospace; font-size:8px;
+      padding: 2px 10px; border-radius: 999px;
+      border: 1.5px solid var(--black);
+    }
+    .stat-score-chip.dark-text { color: #333; }
+
+    /* ════════════════════════════════
+       COMBAT ROW
+    ════════════════════════════════ */
+    .combat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 2fr;
+      gap: 8px;
+      margin-bottom: 1rem;
+      animation: fade-up 0.4s 0.13s ease both;
+    }
+    .combat-box {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 12px;
+      box-shadow: 3px 3px 0 var(--black);
+      padding: 0.65rem 0.75rem;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .combat-box::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--red); border-radius:10px 0 0 10px; }
+    .cb-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); margin-bottom:5px; }
+    .cb-value { font-family:'Press Start 2P',monospace; font-size:clamp(16px,3vw,22px); color:var(--black); line-height:1; }
+    .cb-sub   { font-size:11px; color:var(--gray); font-style:italic; margin-top:3px; }
+
+    /* HP box special layout */
+    .hp-box { text-align:left; padding: 0.65rem 0.9rem; }
+    .hp-box::before { background: #D62828; }
+    .hp-row { display:flex; align-items:baseline; gap:6px; }
+    .hp-current { font-family:'Press Start 2P',monospace; font-size:clamp(20px,4vw,28px); color:var(--black); }
+    .hp-sep     { font-family:'Press Start 2P',monospace; font-size:16px; color:var(--gray-lt); }
+    .hp-max     { font-family:'Press Start 2P',monospace; font-size:16px; color:var(--gray); }
+    .hp-edit    { background:none; border:none; cursor:pointer; font-size:16px; color:var(--gray); margin-left:auto; transition:color 0.13s; display:block; }
+    .hp-edit:hover { color:var(--red); }
+    .hp-inputs  { display:flex; gap:6px; margin-top:6px; }
+    .hp-input   {
+      width:60px; padding:4px 6px; border:1.5px solid var(--black); border-radius:6px;
+      font-family:'Press Start 2P',monospace; font-size:9px; background:var(--off-white);
+      text-align:center;
+    }
+    .hp-apply {
+      flex:1; background:var(--red); color:#fff; border:1.5px solid var(--black); border-radius:6px;
+      font-family:'Press Start 2P',monospace; font-size:7px; cursor:pointer;
+      transition:background 0.13s;
+    }
+    .hp-apply:hover { background:var(--red-dark); }
+
+    /* ════════════════════════════════
+       TABS
+    ════════════════════════════════ */
+    .tab-bar {
+      display: flex; gap: 4px; flex-wrap: wrap;
+      margin-bottom: 1rem;
+      animation: fade-up 0.4s 0.18s ease both;
+    }
+    .tab-btn {
+      background: var(--white);
+      border: 2px solid var(--black);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 var(--black);
+      transition: background 0.12s, transform 0.1s, box-shadow 0.1s;
+      color: var(--black);
+    }
+    .tab-btn:hover { background: var(--off-white); transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--black); }
+    .tab-btn.active { background: var(--red); color: #fff; border-color: var(--black); }
+
+    .tab-panel { display:none; animation: fade-up 0.3s ease both; }
+    .tab-panel.active { display:block; }
+
+    /* ════════════════════════════════
+       SHARED PANEL CARD
+    ════════════════════════════════ */
+    .panel-card {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 14px;
+      box-shadow: 3px 3px 0 var(--black);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem;
+      position: relative; overflow: hidden;
+    }
+    .panel-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--card-accent, var(--red)); border-radius:11px 0 0 11px; }
+    .panel-card-title {
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      color: var(--black); margin-bottom: 0.85rem; padding-left:4px;
+      display:flex; align-items:center; gap:8px;
+    }
+
+    /* ════════════════════════════════
+       STATS TAB — saving throws & skills
+    ════════════════════════════════ */
+    .throws-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .throw-row { display:flex; align-items:center; gap:8px; padding:5px 8px; background:var(--off-white); border-radius:8px; border:1px solid var(--gray-lt); }
+    .throw-dot { width:10px; height:10px; border-radius:50%; border:2px solid var(--black); flex-shrink:0; }
+    .throw-dot.prof { background:var(--black); }
+    .throw-abbr { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); width:28px; }
+    .throw-val  { font-family:'Press Start 2P',monospace; font-size:9px; color:var(--black); margin-left:auto; }
+
+    .skills-list { display:flex; flex-direction:column; gap:4px; }
+    .skill-row { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:8px; transition:background 0.1s; }
+    .skill-row:hover { background:var(--off-white); }
+    .skill-dot { width:8px; height:8px; border-radius:50%; border:1.5px solid var(--black); flex-shrink:0; }
+    .skill-dot.prof { background:var(--black); }
+    .skill-stat { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--gray); width:24px; }
+    .skill-name { font-size:12px; color:var(--black); flex:1; }
+    .skill-val  { font-family:'Press Start 2P',monospace; font-size:9px; color:var(--black); }
+
+    /* senses */
+    .senses-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .sense-chip {
+      background:var(--off-white); border:1.5px solid var(--black); border-radius:8px;
+      padding:6px 12px; display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:80px;
+    }
+    .sense-val  { font-family:'Press Start 2P',monospace; font-size:14px; color:var(--black); }
+    .sense-label{ font-size:10px; color:var(--gray); font-style:italic; text-align:center; }
+
+    /* proficiencies */
+    .prof-section { margin-bottom:0.75rem; }
+    .prof-section:last-child { margin-bottom:0; }
+    .prof-label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); margin-bottom:5px; }
+    .prof-tags  { display:flex; flex-wrap:wrap; gap:5px; }
+    .prof-tag   { font-size:11px; font-weight:700; padding:3px 10px; background:var(--off-white); border:1.5px solid var(--gray-lt); border-radius:999px; color:var(--black); }
+
+    /* ════════════════════════════════
+       INVENTORY TAB
+    ════════════════════════════════ */
+
+    /* ── Top bar: coin summary + manage button ── */
+    .inv-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
+      margin-bottom: 0.85rem;
+    }
+    .coin-summary {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .coin-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      padding: 4px 10px; border-radius: 999px;
+      border: 1.5px solid var(--black);
+      background: var(--off-white);
+    }
+    .coin-chip .coin-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid var(--black); flex-shrink: 0;
+    }
+    .coin-chip.pp .coin-dot { background: #cdd8e3; }
+    .coin-chip.gp .coin-dot { background: #c9a800; }
+    .coin-chip.ep .coin-dot { background: #9eb7b8; }
+    .coin-chip.sp .coin-dot { background: #b0b0b0; }
+    .coin-chip.cp .coin-dot { background: #b87333; }
+
+    .manage-inv-btn {
+      background: var(--black); color: var(--white);
+      border: 2px solid var(--black); border-radius: 8px;
+      padding: 7px 14px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      box-shadow: 2px 2px 0 #555;
+      transition: background 0.13s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .manage-inv-btn:hover { background: var(--red); transform: translate(-1px,-1px); }
+
+    /* ── Search bar ── */
+    .inv-search-wrap {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--off-white); border: 2px solid var(--black);
+      border-radius: 10px; padding: 6px 12px; margin-bottom: 0.75rem;
+    }
+    .inv-search-wrap i { font-size: 18px; color: var(--gray); flex-shrink: 0; }
+    .inv-search {
+      flex: 1; background: none; border: none; outline: none;
+      font-family: 'Nunito', sans-serif; font-size: 13px; color: var(--black);
+    }
+    .inv-search::placeholder { color: var(--gray-lt); }
+
+    /* ── Inventory table ── */
+    .inv-table-wrap { width: 100%; overflow-x: auto; }
+    .inv-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    .inv-table thead tr {
+      border-bottom: 2px solid var(--black);
+    }
+    .inv-table thead th {
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      color: var(--gray); text-align: left; padding: 5px 8px 8px;
+      white-space: nowrap;
+    }
+    .inv-table thead th.right { text-align: right; }
+
+    .inv-table tbody tr {
+      border-bottom: 1px solid var(--gray-lt);
+      transition: background 0.1s;
+    }
+    .inv-table tbody tr:hover { background: var(--off-white); }
+    .inv-table tbody tr:last-child { border-bottom: none; }
+
+    .inv-table td { padding: 8px 8px; vertical-align: middle; }
+
+    .inv-td-icon { width: 28px; }
+    .inv-td-icon i { font-size: 18px; color: var(--gray); }
+    .inv-td-icon i.gold { color: #c9a800; }
+
+    .inv-item-name  { font-weight: 700; color: var(--black); }
+    .inv-item-name.gold { color: #c9a800; }
+    .inv-item-sub   { font-size: 11px; color: var(--gray); font-style: italic; }
+
+    .inv-td-qty {
+      font-family: 'Press Start 2P', monospace; font-size: 9px;
+      color: var(--black); text-align: center; white-space: nowrap;
+    }
+    .inv-td-del {
+      text-align: right; width: 32px;
+    }
+    .inv-del-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; color: var(--gray-lt);
+      transition: color 0.12s; padding: 0; line-height: 1;
+    }
+    .inv-del-btn:hover { color: var(--red); }
+
+    .inv-equip-cell { width: 32px; text-align: center; }
+    .inv-equip-btn {
+      width: 20px; height: 20px;
+      border: 2px solid var(--gray-lt); border-radius: 5px;
+      background: var(--off-white); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; color: transparent;
+      transition: background 0.13s, border-color 0.13s, color 0.13s;
+      flex-shrink: 0; padding: 0;
+    }
+    .inv-equip-btn.equipped        { background: var(--red);    border-color: var(--red);    color: #fff; }
+    .inv-equip-btn.equipped-armor  { background: #3B9DD4;       border-color: #2176ae;       color: #fff; }
+    .inv-stat-row { display: none; }
+    .inv-stat-row.open { display: table-row; }
+    .inv-stat-drawer { padding: 4px 8px 10px 44px; background: #fafafa; }
+    .inv-stat-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+    .inv-stat-chip {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 9px; border-radius: 999px;
+      border: 1.5px solid var(--gray-lt);
+      background: var(--off-white); color: var(--black); white-space: nowrap;
+    }
+    .inv-stat-chip.weapon { background: #fdeaea; border-color: #D62828; color: #D62828; }
+    .inv-stat-chip.armor  { background: #e0f0ff; border-color: #3B9DD4; color: #2176ae; }
+    .inv-stat-chip.prop   { background: var(--off-white); border-color: var(--gray-lt); color: var(--gray); }
+
+    .inv-section-header td {
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      color: var(--black); padding: 10px 8px 4px;
+      border-bottom: 1.5px solid var(--black);
+    }
+
+    .inv-empty { font-style: italic; color: var(--gray); font-size: 13px; padding: 0.75rem 0; }
+
+    /* ════════════════════════════════
+       MANAGE INVENTORY MODAL (inline)
+    ════════════════════════════════ */
+    .inv-modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.6);
+      align-items: center; justify-content: center;
+    }
+    .inv-modal-overlay.visible { display: flex; }
+
+    .inv-modal {
+      background: var(--white);
+      border: 3px solid var(--black); border-radius: 16px;
+      box-shadow: 6px 6px 0 var(--black);
+      width: min(500px, 94vw); max-height: 88vh;
+      overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column;
+      scrollbar-width: thin; scrollbar-color: var(--red) var(--off-white);
+    }
+    .inv-modal::-webkit-scrollbar { width: 5px; }
+    .inv-modal::-webkit-scrollbar-thumb { background: var(--red); border-radius: 999px; }
+
+    .inv-modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem 0.75rem;
+      border-bottom: 2px solid var(--black);
+      position: sticky; top: 0; background: var(--white); z-index: 1;
+    }
+    .inv-modal-title {
+      font-family: 'Press Start 2P', monospace; font-size: 10px;
+      color: var(--red); text-shadow: 1px 1px 0 var(--red-dark);
+    }
+    .inv-modal-close {
+      background: none; border: none; font-size: 20px; color: var(--gray);
+      cursor: pointer; transition: color 0.13s; line-height: 1;
+    }
+    .inv-modal-close:hover { color: var(--red); }
+
+    .inv-modal-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* section inside modal */
+    .inv-modal-section { display: flex; flex-direction: column; gap: 0.6rem; }
+    .inv-modal-section-title {
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      color: var(--black); display: flex; align-items: center;
+      justify-content: space-between; cursor: pointer; user-select: none;
+      padding: 8px 10px; background: var(--off-white);
+      border: 1.5px solid var(--black); border-radius: 8px;
+    }
+    .inv-modal-section-title i.chevron { transition: transform 0.2s; }
+    .inv-modal-section-title.open i.chevron { transform: rotate(90deg); }
+
+    .inv-modal-section-body { display: none; flex-direction: column; gap: 8px; }
+    .inv-modal-section-body.open { display: flex; }
+
+    /* add item form */
+    .inv-form-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .inv-form-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
+    .inv-form-field label {
+      font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--gray);
+    }
+    .inv-form-input {
+      padding: 7px 10px; border: 2px solid var(--black); border-radius: 8px;
+      background: var(--off-white); font-family: 'Nunito', sans-serif;
+      font-size: 13px; color: var(--black); width: 100%;
+    }
+    .inv-form-input:focus { outline: none; border-color: var(--red); }
+    .inv-form-btn {
+      background: var(--black); color: var(--white);
+      border: 2px solid var(--black); border-radius: 8px;
+      padding: 8px 14px; font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer; box-shadow: 2px 2px 0 #555;
+      transition: background 0.13s, transform 0.1s;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .inv-form-btn:hover { background: var(--red); transform: translate(-1px,-1px); }
+    .inv-form-btn.green { background: #2d7a3a; border-color: #2d7a3a; }
+    .inv-form-btn.green:hover { background: #1f5828; }
+    .inv-form-btn.danger { background: #D62828; border-color: #D62828; }
+    .inv-form-btn.danger:hover { background: #a31f1f; }
+
+    /* coin adjust */
+    .coin-adjust-grid {
+      display: grid; grid-template-columns: repeat(5,1fr); gap: 6px;
+    }
+    .coin-adjust-col { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .coin-adjust-col label {
+      font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--gray);
+    }
+    .coin-adjust-input {
+      width: 100%; padding: 6px 4px; border: 2px solid var(--black); border-radius: 6px;
+      background: var(--off-white); font-family: 'Nunito', sans-serif;
+      font-size: 13px; color: var(--black); text-align: center;
+    }
+    .coin-adjust-input:focus { outline: none; border-color: var(--red); }
+    .coin-adjust-btns { display: flex; gap: 8px; }
+    .coin-cur-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; background: var(--off-white); border-radius: 8px;
+      border: 1px solid var(--gray-lt);
+    }
+    .coin-cur-info { display: flex; align-items: center; gap: 8px; }
+    .coin-cur-name { font-weight: 700; font-size: 13px; color: var(--black); }
+    .coin-cur-sub  { font-size: 11px; color: var(--gray); font-style: italic; }
+    .coin-cur-val  { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--black); }
+
+    /* ════════════════════════════════
+       NOTES TAB
+    ════════════════════════════════ */
+    .notes-area {
+      width:100%; min-height:200px; resize:vertical;
+      border:2px solid var(--black); border-radius:10px;
+      background:var(--off-white); padding:0.75rem;
+      font-family:'Nunito',sans-serif; font-size:14px; color:var(--black);
+      line-height:1.6;
+    }
+    .notes-area:focus { outline:none; border-color:var(--red); }
+
+    /* ════════════════════════════════
+       BACKGROUND TAB
+    ════════════════════════════════ */
+    .bg-field { margin-bottom:0.85rem; }
+    .bg-field label { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--gray); display:block; margin-bottom:5px; }
+    .bg-input {
+      width:100%; padding:8px 10px; border:2px solid var(--black); border-radius:8px;
+      background:var(--off-white); font-family:'Nunito',sans-serif; font-size:13px; color:var(--black);
+    }
+    .bg-input:focus { outline:none; border-color:var(--red); }
+    textarea.bg-input { min-height:80px; resize:vertical; line-height:1.5; }
+
+    /* ════════════════════════════════
+       FOOTER
+    ════════════════════════════════ */
+    .footer { margin-top:2rem; font-size:11px; color:var(--gray); text-align:center; font-style:italic; }
+    .footer strong { font-family:'Press Start 2P',monospace; font-size:8px; color:var(--red); font-style:normal; }
+
+    /* ════════════════════════════════
+       DIVIDER
+    ════════════════════════════════ */
+    .dex-divider { display:flex; align-items:center; gap:10px; margin:0.75rem 0 1rem; }
+    .dex-divider-line  { flex:1; height:2px; background:var(--black); }
+    .dex-divider-dot   { width:10px; height:10px; border-radius:50%; background:var(--red); border:2px solid var(--black); }
+    .dex-divider-dot.small { width:6px; height:6px; }
+
+    /* two-col layout for stats tab */
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media(max-width:560px) { .two-col { grid-template-columns:1fr; } .combat-row { grid-template-columns:1fr 1fr; } .stat-bar { grid-template-columns:repeat(3,1fr); } }
+
+    /* ── Home button ── */
+    .home-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--black); color: var(--white);
+      border: 2px solid var(--black); border-radius: 8px;
+      padding: 6px 12px;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 2px 2px 0 #555;
+      transition: background 0.13s, transform 0.1s;
+      margin-bottom: 0.75rem;
+    }
+    .home-btn:hover { background: var(--red); transform: translate(-1px,-1px); }
+
+    /* ── Toast notification ── */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--black); color: var(--white);
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      padding: 10px 20px; border-radius: 10px;
+      border: 2px solid var(--red);
+      box-shadow: 3px 3px 0 var(--red);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 300; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ════════ FROST THEME ════════ */
+    :root {
+      --red:        #E3350D;
+      --red-dark:   #b02a0a;
+      --white:      #1e2d3a;
+      --off-white:  #172330;
+      --black:      #d6eef8;
+      --gray:       #7bafc8;
+      --gray-lt:    #2e4a5e;
+      --frost:      #a8d8ea;
+      --frost-dark: #5b9bb5;
+      --ice:        #d6eef8;
+      --void:       #0d1e2b;
+      --void-mid:   #112233;
+      --accent:     #3a9abf;
+    }
+
+    body {
+      background: linear-gradient(175deg, #0d1e2b 0%, #0f2235 50%, #091825 100%) !important;
+      color: var(--ice) !important;
+      position: relative;
+    }
+
+    /* faint snow layer */
+    .snow-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .snow-bg .sf {
+      position: absolute; top: -10px; border-radius: 50%;
+      background: rgba(200,230,255,0.55);
+      animation: sf-fall linear infinite;
+    }
+    @keyframes sf-fall {
+      0%   { transform: translateY(-10px) translateX(0);   opacity: 0; }
+      8%   { opacity: 0.7; }
+      92%  { opacity: 0.4; }
+      100% { transform: translateY(105vh) translateX(30px); opacity: 0; }
+    }
+
+    /* top stripe — icy */
+    .top-stripe {
+      background: linear-gradient(90deg, #1a5f7a, #3a9abf, #1a5f7a) !important;
+    }
+    .top-stripe::after {
+      background: rgba(168,216,234,0.35) !important;
+    }
+
+    /* cards / panel cards */
+    .panel-card, .dnd-card, .class-row, .name-card,
+    .collapse-row, .equip-panel, .dropdown-panel,
+    .stat-box, .combat-box, .points-card, .stat-card,
+    .class-block .class-trigger, .class-block .equip-panel,
+    .inv-modal, .selected-banner, .option-group,
+    .pkg-box, .hero-banner, .tab-btn, .card {
+      background: rgba(255,255,255,0.04) !important;
+      border-color: rgba(168,216,234,0.2) !important;
+      color: var(--ice) !important;
+    }
+
+    .panel-card::before  { background: var(--frost-dark) !important; }
+    .hero-banner::before { background: var(--frost-dark) !important; }
+    .class-row::before, .collapse-row::before, .name-card::before { background: var(--frost-dark) !important; }
+    .stat-box::before    { background: var(--sc) !important; }
+    .combat-box::before  { background: var(--frost-dark) !important; }
+    .points-card::before { background: var(--frost-dark) !important; }
+    .stat-card::before   { background: var(--stat-color) !important; }
+
+    /* box shadows — icy */
+    .panel-card, .hero-banner, .class-row, .name-card,
+    .stat-box, .combat-box, .points-card, .stat-card,
+    .collapse-row, .selected-banner {
+      box-shadow: 3px 3px 0 rgba(58,154,191,0.3) !important;
+    }
+
+    /* text colours */
+    .panel-card-title, .class-name, .stat-mod, .cb-value,
+    .hp-current, .tab-btn.active, .poke-name, .trigger-name,
+    .option-group-label, .collapse-title, .hero-name,
+    .points-remaining, .stat-value, .dnd-title, .main-title,
+    h1, .header-text h1 {
+      color: var(--ice) !important;
+    }
+
+    .hero-sub, .class-source, .collapse-subtitle, .trigger-sub,
+    .card-desc, .subtitle, .cost-label, .stat-name,
+    .cb-sub, .mod-label, .poke-types, .inv-item-sub,
+    .footer, .class-source {
+      color: var(--gray) !important;
+    }
+
+    /* inputs */
+    .name-card-input, .inv-search, .notes-area, .bg-input,
+    .inv-form-input, .coin-adjust-input, .hp-input,
+    .stat-btn, .inv-search-wrap {
+      background: rgba(255,255,255,0.06) !important;
+      border-color: rgba(168,216,234,0.25) !important;
+      color: var(--ice) !important;
+    }
+    .name-card-input:focus, .inv-search:focus,
+    .notes-area:focus, .bg-input:focus, .inv-form-input:focus { border-color: var(--frost) !important; }
+
+    /* tabs */
+    .tab-btn {
+      background: rgba(255,255,255,0.05) !important;
+      border-color: rgba(168,216,234,0.2) !important;
+      color: var(--gray) !important;
+    }
+    .tab-btn.active {
+      background: var(--frost-dark) !important;
+      color: var(--ice) !important;
+      border-color: var(--frost-dark) !important;
+    }
+    .tab-btn:hover:not(.active) { background: rgba(168,216,234,0.1) !important; }
+
+    /* buttons */
+    .next-btn, .save-btn, .rest-btn, .manage-inv-btn,
+    .reset-btn, .back-btn, .home-btn {
+      background: rgba(58,154,191,0.25) !important;
+      border-color: rgba(168,216,234,0.35) !important;
+      color: var(--ice) !important;
+      box-shadow: 2px 2px 0 rgba(58,154,191,0.2) !important;
+    }
+    .next-btn:hover, .save-btn:hover, .rest-btn:hover,
+    .manage-inv-btn:hover, .reset-btn:hover, .home-btn:hover {
+      background: var(--frost-dark) !important;
+    }
+
+    /* stat buttons (+ / -) */
+    .stat-btn {
+      background: rgba(58,154,191,0.3) !important;
+      border-color: rgba(168,216,234,0.3) !important;
+      color: var(--ice) !important;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.3) !important;
+    }
+    .stat-btn:hover:not(:disabled) { background: var(--frost-dark) !important; }
+    .stat-btn:disabled { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.2) !important; }
+
+    /* score chips on stat bar */
+    .stat-score-chip { border-color: rgba(0,0,0,0.4) !important; }
+
+    /* stat mod row bg */
+    .stat-mod-row { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.15) !important; }
+
+    /* save button (equipment) — keep it distinct */
+    .save-btn {
+      background: var(--frost-dark) !important;
+      border-color: var(--frost) !important;
+    }
+    .save-btn:hover { background: var(--accent) !important; }
+
+    /* type badges — keep their own colors */
+    .type-badge, .trigger-badge, .badge, .hero-badge,
+    .card-type-badge { color: #fff !important; }
+
+    /* inv rows */
+    .inv-row, .inv-table tbody tr:hover { background: rgba(255,255,255,0.05) !important; }
+    .inv-stat-drawer { background: rgba(255,255,255,0.04) !important; }
+    .inv-stat-chip.prop { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--gray) !important; }
+
+    /* prof tags */
+    .prof-tag { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+
+    /* skill / throw rows */
+    .throw-row, .sense-chip { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.15) !important; }
+    .inv-row { background: rgba(255,255,255,0.04) !important; border-color: rgba(168,216,234,0.12) !important; }
+
+    /* pokemon rows */
+    .poke-row:hover { background: rgba(168,216,234,0.07) !important; }
+    .poke-row.selected { background: rgba(58,154,191,0.15) !important; border-left-color: var(--frost) !important; }
+    .poke-row.selected .poke-name { color: var(--frost) !important; }
+
+    /* class row selected */
+    .class-row.selected { background: rgba(58,154,191,0.12) !important; border-color: var(--frost-dark) !important; }
+    .class-row.selected .class-name { color: var(--frost) !important; }
+
+    /* option / pkg boxes */
+    .pkg-box.selectable:hover { background: rgba(168,216,234,0.08) !important; }
+    .pkg-box.selectable.selected { background: rgba(58,154,191,0.15) !important; border-color: var(--frost) !important; }
+
+    /* item pills */
+    .item-pill { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+    .item-pill i { color: var(--gray) !important; }
+
+    /* coin chips */
+    .coin-chip { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; }
+
+    /* points bar track */
+    .points-bar-wrap { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; }
+
+    /* dividers */
+    .dex-divider-line { background: rgba(168,216,234,0.25) !important; }
+    .dex-divider-dot  { background: var(--frost-dark) !important; border-color: var(--frost) !important; box-shadow: 0 0 6px var(--frost-dark); }
+
+    /* section headers in table */
+    .inv-section-header td { border-bottom-color: rgba(168,216,234,0.3) !important; }
+
+    /* poke-dex numbers */
+    .poke-dex { color: rgba(168,216,234,0.2) !important; }
+
+    /* cost badge */
+    .cost-badge { color: #fff !important; }
+
+    /* equip button unselected */
+    .inv-equip-btn { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.25) !important; }
+
+    /* modal overlays */
+    .crop-modal, .inv-modal {
+      background: #132030 !important;
+      border-color: rgba(168,216,234,0.3) !important;
+    }
+    .inv-modal-head { background: #132030 !important; border-bottom-color: rgba(168,216,234,0.2) !important; }
+    .inv-modal-section-title { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+    .inv-modal-section-title.open { background: rgba(58,154,191,0.15) !important; }
+    .coin-cur-row { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.12) !important; }
+    .coin-cur-name { color: var(--ice) !important; }
+
+    /* scrollbars */
+    * { scrollbar-color: var(--frost-dark) rgba(255,255,255,0.05); }
+    *::-webkit-scrollbar-track { background: rgba(255,255,255,0.04) !important; }
+    *::-webkit-scrollbar-thumb { background: var(--frost-dark) !important; }
+
+    /* hp sep */
+    .hp-sep, .hp-max, .points-sep, .points-total-num { color: rgba(168,216,234,0.35) !important; }
+
+    /* or-sep */
+    .or-sep, .or-sep-inner { color: rgba(168,216,234,0.25) !important; }
+
+    /* selected banner */
+    .selected-banner.visible { background: rgba(255,255,255,0.05) !important; }
+    .banner-name { color: var(--ice) !important; }
+
+    /* bg-modal form labels */
+    .bg-field label, .inv-form-field label, .coin-adjust-col label,
+    .name-card-label, .crop-zoom-label { color: var(--gray) !important; }
+
+    /* pokeball watermark tint */
+    .pokeball-bg svg path { fill: #2a7fa0 !important; }
+    .pokeball-bg svg circle:first-child { stroke: rgba(168,216,234,0.3) !important; }
+
+    /* footer strong */
+    .footer strong { color: var(--frost-dark) !important; }
+    /* ════════ END FROST THEME ════════ */
+
+    /* ── Snow toggle button ── */
+    .snow-toggle {
+      position: fixed;
+      bottom: 1.2rem;
+      right: 1.2rem;
+      z-index: 200;
+      background: rgba(13,30,43,0.85);
+      border: 1.5px solid rgba(168,216,234,0.3);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: rgba(168,216,234,0.7);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(6px);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    .snow-toggle:hover {
+      border-color: rgba(168,216,234,0.6);
+      color: rgba(168,216,234,1);
+      background: rgba(20,45,65,0.95);
+    }
+    .snow-toggle.snow-off {
+      opacity: 0.5;
+    }
+    .snow-toggle .snow-icon {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<div class="top-stripe"></div>
+<div class="snow-bg" id="snow-bg" aria-hidden="true"></div>
+
+<div class="pokeball-bg" aria-hidden="true">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="96" fill="none" stroke="#1a1a1a" stroke-width="8"/>
+    <path d="M 4 100 A 96 96 0 0 1 196 100 Z" fill="#E3350D"/>
+    <rect x="4" y="91" width="192" height="18" fill="#1a1a1a"/>
+    <circle cx="100" cy="100" r="22" fill="#1a1a1a"/>
+    <circle cx="100" cy="100" r="14" fill="#FAFAFA"/>
+    <circle cx="100" cy="100" r="6" fill="#1a1a1a"/>
+  </svg>
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="avatar-file-input" accept="image/*" style="display:none" />
+
+<!-- Crop modal -->
+<div class="crop-overlay" id="crop-overlay" role="dialog" aria-modal="true" aria-label="Crop your trainer photo">
+  <div class="crop-modal">
+    <p class="crop-modal-title"><i class="ti ti-crop" aria-hidden="true"></i>CROP YOUR PHOTO</p>
+    <button class="crop-close" id="crop-close" aria-label="Cancel"><i class="ti ti-x"></i></button>
+    <div class="crop-canvas-wrap" id="crop-canvas-wrap">
+      <canvas id="crop-canvas"></canvas>
+    </div>
+    <div class="crop-controls">
+      <span class="crop-zoom-label">ZOOM</span>
+      <input type="range" id="crop-zoom" min="0.5" max="3" step="0.01" value="1" />
+    </div>
+    <div class="crop-actions">
+      <button class="crop-btn crop-btn-cancel" id="crop-cancel">CANCEL</button>
+      <button class="crop-btn crop-btn-confirm" id="crop-confirm">SAVE PHOTO</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="page">
+  <a class="home-btn" href="dnd_pokemon_home.html"><i class="ti ti-arrow-left" aria-hidden="true"></i>HOME</a>
+  <!-- HERO BANNER -->
+  <div class="hero-banner" id="hero-banner">
+    <div class="hero-avatar" id="hero-avatar" role="button" tabindex="0" aria-label="Upload trainer photo">
+      <i class="ti ti-pokeball" aria-hidden="true" id="avatar-placeholder"></i>
+    </div>
+    <div class="hero-info">
+      <p class="hero-name" id="hero-name">Trainer</p>
+      <p class="hero-sub"  id="hero-sub">Human · Level 1</p>
+      <div class="hero-badges" id="hero-badges"></div>
+    </div>
+    <div class="rest-btns">
+      <button class="rest-btn" id="short-rest-btn"><i class="ti ti-moon" aria-hidden="true"></i>SHORT REST</button>
+      <button class="rest-btn" id="long-rest-btn"><i class="ti ti-zzz" aria-hidden="true"></i>LONG REST</button>
+    </div>
+  </div>
+
+  <!-- STAT BAR -->
+  <div class="stat-bar" id="stat-bar"></div>
+
+  <!-- COMBAT ROW -->
+  <div class="combat-row">
+    <div class="combat-box">
+      <p class="cb-label">PROF BONUS</p>
+      <p class="cb-value" id="prof-val">+2</p>
+      <p class="cb-sub">proficiency</p>
+    </div>
+    <div class="combat-box">
+      <p class="cb-label">INITIATIVE</p>
+      <p class="cb-value" id="init-val">+0</p>
+      <p class="cb-sub">dexterity</p>
+    </div>
+    <div class="combat-box">
+      <p class="cb-label">ARMOR CLASS</p>
+      <p class="cb-value" id="ac-val">10</p>
+      <p class="cb-sub">unarmored</p>
+    </div>
+    <div class="combat-box hp-box">
+      <p class="cb-label" style="text-align:left">HIT POINTS</p>
+      <div style="display:flex;align-items:center">
+        <div class="hp-row">
+          <span class="hp-current" id="hp-current">10</span>
+          <span class="hp-sep">/</span>
+          <span class="hp-max" id="hp-max">10</span>
+        </div>
+        <button class="hp-edit" id="hp-edit-btn" aria-label="Edit HP"><i class="ti ti-pencil"></i></button>
+      </div>
+      <div class="hp-inputs" id="hp-inputs" style="display:none">
+        <input class="hp-input" type="number" id="hp-dmg-input" placeholder="dmg" min="0" />
+        <input class="hp-input" type="number" id="hp-heal-input" placeholder="heal" min="0" />
+        <button class="hp-apply" id="hp-apply-btn">APPLY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="stats">STATS</button>
+    <button class="tab-btn" data-tab="inventory">INVENTORY</button>
+    <button class="tab-btn" data-tab="background">BACKGROUND</button>
+    <button class="tab-btn" data-tab="notes">NOTES</button>
+  </div>
+
+  <!-- ── STATS TAB ── -->
+  <div class="tab-panel active" id="tab-stats">
+    <div class="two-col">
+      <!-- Left col -->
+      <div>
+        <div class="panel-card" style="--card-accent:#D62828">
+          <p class="panel-card-title"><i class="ti ti-shield-half" aria-hidden="true"></i>SAVING THROWS</p>
+          <div class="throws-grid" id="throws-grid"></div>
+        </div>
+        <div class="panel-card" style="--card-accent:#3B9DD4">
+          <p class="panel-card-title"><i class="ti ti-eye" aria-hidden="true"></i>SENSES</p>
+          <div class="senses-row" id="senses-row"></div>
+        </div>
+        <div class="panel-card" style="--card-accent:#5FBD58">
+          <p class="panel-card-title"><i class="ti ti-certificate" aria-hidden="true"></i>PROFICIENCIES</p>
+          <div id="prof-block"></div>
+        </div>
+      </div>
+      <!-- Right col -->
+      <div>
+        <div class="panel-card" style="--card-accent:#6B4FA0">
+          <p class="panel-card-title"><i class="ti ti-list-check" aria-hidden="true"></i>SKILLS</p>
+          <div class="skills-list" id="skills-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INVENTORY MODAL (inline) ── -->
+  <div class="inv-modal-overlay" id="inv-modal-overlay">
+    <div class="inv-modal" role="dialog" aria-modal="true" aria-label="Manage Inventory">
+      <div class="inv-modal-head">
+        <p class="inv-modal-title">MANAGE INVENTORY</p>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <a href="dnd_pokemon_item_list.html" style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--frost,#a8d8ea);text-decoration:none;display:flex;align-items:center;gap:5px;padding:5px 10px;border:1.5px solid rgba(168,216,234,0.3);border-radius:7px;background:rgba(58,154,191,0.15);transition:background 0.13s;" onmouseover="this.style.background='rgba(58,154,191,0.3)'" onmouseout="this.style.background='rgba(58,154,191,0.15)'">
+            <i class="ti ti-book-2" aria-hidden="true"></i>ITEM LIST
+          </a>
+          <button class="inv-modal-close" id="inv-modal-close" aria-label="Close"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+      <div class="inv-modal-body">
+
+        <!-- ADD ITEMS section -->
+        <div class="inv-modal-section">
+          <div class="inv-modal-section-title open" id="sect-add-trigger">
+            <span>ADD ITEMS</span>
+            <i class="ti ti-chevron-right chevron" aria-hidden="true"></i>
+          </div>
+          <div class="inv-modal-section-body open" id="sect-add-body">
+            <div class="inv-form-row">
+              <div class="inv-form-field" style="flex:2">
+                <label>ITEM NAME</label>
+                <input class="inv-form-input" id="add-item-name" type="text" placeholder="e.g. Healing Potion" />
+              </div>
+              <div class="inv-form-field" style="flex:0 0 70px">
+                <label>QTY</label>
+                <input class="inv-form-input" id="add-item-qty" type="number" min="1" value="1" />
+              </div>
+              <button class="inv-form-btn green" id="add-item-btn"><i class="ti ti-plus"></i> ADD</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MANAGE COIN section -->
+        <div class="inv-modal-section">
+          <div class="inv-modal-section-title open" id="sect-coin-trigger">
+            <span>MANAGE COIN</span>
+            <i class="ti ti-chevron-right chevron" aria-hidden="true"></i>
+          </div>
+          <div class="inv-modal-section-body open" id="sect-coin-body">
+            <!-- Current totals -->
+            <div style="display:flex;flex-direction:column;gap:5px;" id="coin-cur-list"></div>
+            <!-- Adjust inputs -->
+            <div class="coin-adjust-grid" id="coin-adjust-grid"></div>
+            <div class="coin-adjust-btns">
+              <button class="inv-form-btn green" id="coin-add-btn" style="flex:1"><i class="ti ti-plus"></i> ADD</button>
+              <button class="inv-form-btn danger" id="coin-remove-btn" style="flex:1"><i class="ti ti-minus"></i> REMOVE</button>
+              <button class="inv-form-btn" id="coin-clear-btn" style="flex:1"><i class="ti ti-x"></i> CLEAR ALL</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INVENTORY TAB ── -->
+  <div class="tab-panel" id="tab-inventory">
+    <div class="panel-card" style="--card-accent:var(--red)">
+
+      <!-- Top bar: coin summary + manage button -->
+      <div class="inv-topbar">
+        <div class="coin-summary" id="coin-summary"></div>
+        <button class="manage-inv-btn" id="manage-inv-btn">
+          <i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>MANAGE INVENTORY
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="inv-search-wrap">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input class="inv-search" id="inv-search" type="text" placeholder="Search item names…" />
+      </div>
+
+      <!-- Table -->
+      <div class="inv-table-wrap">
+        <table class="inv-table" id="inv-table">
+          <thead>
+            <tr>
+              <th style="width:32px"></th>
+              <th style="width:28px"></th>
+              <th>NAME</th>
+              <th class="right" style="width:48px">QTY</th>
+              <th style="width:32px"></th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BACKGROUND TAB ── -->
+  <div class="tab-panel" id="tab-background">
+    <div class="panel-card" style="--card-accent:#FF9741">
+      <p class="panel-card-title"><i class="ti ti-user" aria-hidden="true"></i>TRAINER PROFILE</p>
+      <div class="bg-field"><label>CHARACTER NAME</label><input class="bg-input" id="bg-name" type="text" placeholder="Enter your trainer name…" /></div>
+      <div class="bg-field"><label>HOMETOWN / ORIGIN</label><input class="bg-input" id="bg-origin" type="text" placeholder="e.g. Twinleaf Town" /></div>
+      <div class="bg-field"><label>TRAINER ID</label><input class="bg-input" id="bg-tid" type="text" placeholder="e.g. #810-A" /></div>
+      <div class="bg-field"><label>PERSONALITY TRAIT</label><textarea class="bg-input" id="bg-trait" placeholder="How does your trainer act?"></textarea></div>
+      <div class="bg-field"><label>IDEAL</label><textarea class="bg-input" id="bg-ideal" placeholder="What does your trainer believe in?"></textarea></div>
+      <div class="bg-field"><label>BOND</label><textarea class="bg-input" id="bg-bond" placeholder="Who or what does your trainer protect?"></textarea></div>
+      <div class="bg-field"><label>FLAW</label><textarea class="bg-input" id="bg-flaw" placeholder="What holds your trainer back?"></textarea></div>
+      <button class="rest-btn" id="save-bg-btn" style="margin-top:0.5rem"><i class="ti ti-device-floppy"></i>SAVE PROFILE</button>
+    </div>
+  </div>
+
+  <!-- ── NOTES TAB ── -->
+  <div class="tab-panel" id="tab-notes">
+    <div class="panel-card" style="--card-accent:#74CEC0">
+      <p class="panel-card-title"><i class="ti ti-notebook" aria-hidden="true"></i>ADVENTURE LOG</p>
+      <textarea class="notes-area" id="notes-area" placeholder="Write your adventure notes here…"></textarea>
+      <button class="rest-btn" id="save-notes-btn" style="margin-top:0.75rem"><i class="ti ti-device-floppy"></i>SAVE NOTES</button>
+    </div>
+  </div>
+
+  <p class="footer"><strong>v0.1.0</strong> &nbsp;&middot;&nbsp; <span id="footer-tagline"></span></p>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// TOAST HELPER
+// ══════════════════════════════════════
+var toastTimer = null;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+function ls(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+function lsJ(key) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
+
+var selectedClass   = ls('pd_selected_class')   || 'Unknown';
+var selectedStarter = ls('pd_selected_starter')  || null;
+var trainerName     = ls('pd_trainer_name')       || null;
+var equipData       = lsJ('pd_character_equipment');
+var inventory       = (equipData && equipData.inventory)     ? equipData.inventory     : [];
+var inventoryFull   = (equipData && equipData.inventoryFull) ? equipData.inventoryFull : [];
+
+// Stats — saved by point buy page as pd_stats: { str:N, dex:N, ... }
+var savedStats = lsJ('pd_stats') || { str:10, dex:10, con:10, int:10, wis:10, cha:10 };
+
+// Notes & background
+var savedNotes = ls('pd_notes') || '';
+var savedBg    = lsJ('pd_background') || {};
+var savedHP    = lsJ('pd_hp');
+
+// ══════════════════════════════════════
+// STAT DEFINITIONS
+// ══════════════════════════════════════
+var statDefs = [
+  { key:'str', abbr:'STR', name:'Strength',     color:'#D62828', chip:'dark' },
+  { key:'dex', abbr:'DEX', name:'Dexterity',    color:'#5FBD58', chip:'' },
+  { key:'con', abbr:'CON', name:'Constitution', color:'#FF9741', chip:'' },
+  { key:'int', abbr:'INT', name:'Intelligence', color:'#3B9DD4', chip:'' },
+  { key:'wis', abbr:'WIS', name:'Wisdom',       color:'#6B4FA0', chip:'' },
+  { key:'cha', abbr:'CHA', name:'Charisma',     color:'#FF6DA3', chip:'' },
+];
+
+function mod(score) { return Math.floor((score - 10) / 2); }
+function fmtMod(m)  { return (m >= 0 ? '+' : '') + m; }
+
+// ══════════════════════════════════════
+// CLASS DATA (proficiencies, HP die, AC, saves)
+// ══════════════════════════════════════
+var classInfo = {
+  'Seasoned Rival':      { hpDie:10, acBonus:0, savingThrows:['str','dex'],
+    skills:['Athletics','Perception','Intimidation'], armor:'Light, Medium', weapons:'Simple, Martial', tools:'None', languages:'Common' },
+  'Iron Monk':       { hpDie:10, acBonus:0, unarmoredAC:true, savingThrows:['str','con'],
+    skills:['Athletics','Acrobatics'], armor:'None', weapons:'Simple, Unarmed', tools:'None', languages:'Common' },
+  'Trail Warden':   { hpDie:10, acBonus:0, savingThrows:['str','dex'],
+    skills:['Athletics','Nature','Survival','Perception'], armor:'Light, Medium, Shields', weapons:'Simple, Martial', tools:'Herbalism Kit', languages:'Common + 1' },
+  'Village Sprout':        { hpDie:8, acBonus:0, savingThrows:['dex','cha'],
+    skills:['Acrobatics','Deception','Sleight of Hand','Stealth'], armor:'Light', weapons:'Simple', tools:'None', languages:'Common' },
+  'Drumfire Bard':             { hpDie:8, acBonus:0, savingThrows:['dex','cha'],
+    skills:['Acrobatics','Persuasion','Performance','Insight'], armor:'Light', weapons:'Simple', tools:'None', languages:'Common + 1' },
+  'Thicket Trapper':      { hpDie:8, acBonus:0, savingThrows:['int','wis'],
+    skills:['Nature','Perception','Survival','Animal Handling'], armor:'Light', weapons:'Simple', tools:'Herbalism Kit', languages:'Common' },
+  'Ridge Walker':            { hpDie:12, acBonus:0, unarmoredAC:true, savingThrows:['str','con'],
+    skills:['Athletics','Survival','Perception'], armor:'Light, Medium', weapons:'Simple, Martial', tools:'None', languages:'Common' },
+  'Kindler':          { hpDie:8, acBonus:0, savingThrows:['con','dex'],
+    skills:['Athletics','Survival','Intimidation'], armor:'Light', weapons:'Simple, Handaxes', tools:'Tinker\'s Tools', languages:'Common' },
+  'Shallows Sifter':          { hpDie:8, acBonus:0, unarmoredAC:true, savingThrows:['str','dex'],
+    skills:['Athletics','Acrobatics','Survival'], armor:'None', weapons:'Simple', tools:'None', languages:'Common' },
+  'Fieldborne':           { hpDie:8, acBonus:0, savingThrows:['con','int'],
+    skills:['Nature','Survival','Investigation','Animal Handling'], armor:'Light, Medium', weapons:'Simple', tools:"Tinker's Tools, Herbalism Kit", languages:'Common' },
+  'Seer':          { hpDie:6, acBonus:0, savingThrows:['int','wis'],
+    skills:['Arcana','Insight','Perception'], armor:'None', weapons:'Simple', tools:'None', languages:'Common + 2' },
+  'Pokémon Tender':  { hpDie:8, acBonus:0, savingThrows:['wis','con'],
+    skills:['Nature','Animal Handling','Medicine','Insight'], armor:'Light', weapons:'Simple', tools:'Herbalism Kit', languages:'Common + 1' },
+};
+var info = classInfo[selectedClass] || classInfo['Seasoned Rival'];
+
+// ══════════════════════════════════════
+// SKILL TABLE
+// ══════════════════════════════════════
+var allSkills = [
+  { name:'Acrobatics',     stat:'dex' }, { name:'Animal Handling', stat:'wis' },
+  { name:'Arcana',         stat:'int' }, { name:'Athletics',       stat:'str' },
+  { name:'Deception',      stat:'cha' }, { name:'History',         stat:'int' },
+  { name:'Insight',        stat:'wis' }, { name:'Intimidation',    stat:'cha' },
+  { name:'Investigation',  stat:'int' }, { name:'Medicine',        stat:'wis' },
+  { name:'Nature',         stat:'int' }, { name:'Perception',      stat:'wis' },
+  { name:'Performance',    stat:'cha' }, { name:'Persuasion',      stat:'cha' },
+  { name:'Religion',       stat:'int' }, { name:'Sleight of Hand', stat:'dex' },
+  { name:'Stealth',        stat:'dex' }, { name:'Survival',        stat:'wis' },
+];
+
+// ══════════════════════════════════════
+// DERIVED VALUES
+// ══════════════════════════════════════
+var profBonus = 2;
+var scores    = savedStats;
+var conMod    = mod(scores.con || 10);
+var dexMod    = mod(scores.dex || 10);
+var strMod    = mod(scores.str || 10);
+var maxHP     = info.hpDie + conMod;
+if (maxHP < 1) maxHP = 1;
+var currentHP = savedHP ? savedHP.current : maxHP;
+var acValue   = info.unarmoredAC ? (10 + conMod + dexMod) : (10 + dexMod);
+
+// ══════════════════════════════════════
+// HERO BANNER
+// ══════════════════════════════════════
+document.getElementById('hero-name').textContent = trainerName || savedBg.name || 'Your Trainer';
+document.getElementById('hero-sub').textContent  = 'Human · ' + selectedClass + ' · Level 1';
+
+var typeMap = {
+  'Seasoned Rival':     'Normal',
+  'Iron Monk':      'Fighting',
+  'Trail Warden':  'Grass',
+  'Village Sprout':       'Normal',
+  'Drumfire Bard':            'Fairy',
+  'Thicket Trapper':     'Bug',
+  'Ridge Walker':           'Rock',
+  'Kindler':         'Fire',
+  'Shallows Sifter':         'Water',
+  'Fieldborne':          'Normal',
+  'Seer':         'Seer',
+  'Pokémon Tender': 'Grass',
+};
+var typeColors = {
+  Normal:   '#9FA19F',
+  Fighting: '#D62828',
+  Grass:    '#5FBD58',
+  Fairy:    '#FF6DA3',
+  Bug:      '#8CB230',
+  Rock:     '#A38C21',
+  Water:    '#3B9DD4',
+  Fire:     '#FF9741',
+  Seer:  '#FF6DA3',
+};
+var typeName  = typeMap[selectedClass] || 'Normal';
+var typeColor = typeColors[typeName] || '#9FA19F';
+var isDark    = (typeName === 'Electric');
+
+var badgeContainer = document.getElementById('hero-badges');
+var b1 = document.createElement('span');
+b1.className = 'hero-badge';
+b1.style.background = typeColor;
+b1.style.color = isDark ? '#333' : '#fff';
+b1.textContent = typeName;
+badgeContainer.appendChild(b1);
+
+if (selectedStarter) {
+  var b2 = document.createElement('span');
+  b2.className = 'hero-badge';
+  b2.style.background = '#3B9DD4';
+  b2.textContent = 'Partner: ' + selectedStarter;
+  badgeContainer.appendChild(b2);
+}
+
+// ══════════════════════════════════════
+// STAT BAR
+// ══════════════════════════════════════
+var statBar = document.getElementById('stat-bar');
+statDefs.forEach(function(s) {
+  var score = scores[s.key] || 10;
+  var m     = mod(score);
+  var box   = document.createElement('div');
+  box.className = 'stat-box';
+  box.style.setProperty('--sc', s.color);
+  box.innerHTML =
+    '<p class="stat-abbr">' + s.abbr + '</p>' +
+    '<p class="stat-mod">'  + fmtMod(m) + '</p>' +
+    '<span class="stat-score-chip' + (s.chip === 'dark' ? ' dark-text' : '') + '">' + score + '</span>';
+  statBar.appendChild(box);
+});
+
+// ══════════════════════════════════════
+// COMBAT ROW — fill derived values
+// ══════════════════════════════════════
+document.getElementById('prof-val').textContent  = fmtMod(profBonus);
+document.getElementById('init-val').textContent  = fmtMod(dexMod);
+document.getElementById('ac-val').textContent    = acValue;
+document.getElementById('hp-current').textContent = currentHP;
+document.getElementById('hp-max').textContent     = maxHP;
+
+// HP edit toggle
+var hpEditing = false;
+document.getElementById('hp-edit-btn').addEventListener('click', function() {
+  hpEditing = !hpEditing;
+  document.getElementById('hp-inputs').style.display = hpEditing ? 'flex' : 'none';
+});
+document.getElementById('hp-apply-btn').addEventListener('click', function() {
+  var dmg  = parseInt(document.getElementById('hp-dmg-input').value)  || 0;
+  var heal = parseInt(document.getElementById('hp-heal-input').value) || 0;
+  currentHP = currentHP - dmg + heal;
+  if (currentHP < 0) currentHP = 0;
+  if (currentHP > maxHP) currentHP = maxHP;
+  document.getElementById('hp-current').textContent = currentHP;
+  document.getElementById('hp-dmg-input').value  = '';
+  document.getElementById('hp-heal-input').value = '';
+  try { localStorage.setItem('pd_hp', JSON.stringify({ current: currentHP, max: maxHP })); } catch(e) {}
+});
+
+// ══════════════════════════════════════
+// SHORT / LONG REST
+// ══════════════════════════════════════
+document.getElementById('short-rest-btn').addEventListener('click', function() {
+  var roll = Math.floor(Math.random() * info.hpDie) + 1 + conMod;
+  if (roll < 1) roll = 1;
+  currentHP = Math.min(currentHP + roll, maxHP);
+  document.getElementById('hp-current').textContent = currentHP;
+  try { localStorage.setItem('pd_hp', JSON.stringify({ current: currentHP, max: maxHP })); } catch(e) {}
+  toast('SHORT REST — +' + roll + ' HP (' + currentHP + '/' + maxHP + ')');
+});
+document.getElementById('long-rest-btn').addEventListener('click', function() {
+  currentHP = maxHP;
+  document.getElementById('hp-current').textContent = currentHP;
+  try { localStorage.setItem('pd_hp', JSON.stringify({ current: currentHP, max: maxHP })); } catch(e) {}
+  toast('LONG REST — fully restored to ' + maxHP + ' HP');
+});
+
+// ══════════════════════════════════════
+// SAVING THROWS
+// ══════════════════════════════════════
+var throwsGrid = document.getElementById('throws-grid');
+statDefs.forEach(function(s) {
+  var isProf = info.savingThrows.indexOf(s.key) !== -1;
+  var val    = mod(scores[s.key] || 10) + (isProf ? profBonus : 0);
+  var row    = document.createElement('div');
+  row.className = 'throw-row';
+  row.innerHTML =
+    '<div class="throw-dot' + (isProf ? ' prof' : '') + '" style="' + (isProf ? '' : 'border-color:' + s.color) + '"></div>' +
+    '<span class="throw-abbr">' + s.abbr + '</span>' +
+    '<span style="font-size:12px;color:var(--gray);flex:1">' + s.name + '</span>' +
+    '<span class="throw-val">' + fmtMod(val) + '</span>';
+  throwsGrid.appendChild(row);
+});
+
+// ══════════════════════════════════════
+// SENSES
+// ══════════════════════════════════════
+var wisMod     = mod(scores.wis || 10);
+var passPerc   = 10 + wisMod + (info.skills.indexOf('Perception')      !== -1 ? profBonus : 0);
+var passInv    = 10 + mod(scores.int||10) + (info.skills.indexOf('Investigation') !== -1 ? profBonus : 0);
+var passIns    = 10 + wisMod + (info.skills.indexOf('Insight')          !== -1 ? profBonus : 0);
+var sensesRow  = document.getElementById('senses-row');
+[['Passive Perception', passPerc],['Passive Investigation', passInv],['Passive Insight', passIns]].forEach(function(pair) {
+  var chip = document.createElement('div');
+  chip.className = 'sense-chip';
+  chip.innerHTML = '<span class="sense-val">' + pair[1] + '</span><span class="sense-label">' + pair[0] + '</span>';
+  sensesRow.appendChild(chip);
+});
+
+// ══════════════════════════════════════
+// PROFICIENCIES BLOCK
+// ══════════════════════════════════════
+var profBlock = document.getElementById('prof-block');
+[
+  { label:'ARMOR',     val: info.armor },
+  { label:'WEAPONS',   val: info.weapons },
+  { label:'TOOLS',     val: info.tools },
+  { label:'LANGUAGES', val: info.languages },
+].forEach(function(p) {
+  var sec = document.createElement('div');
+  sec.className = 'prof-section';
+  var tags = p.val.split(',').map(function(t) {
+    return '<span class="prof-tag">' + t.trim() + '</span>';
+  }).join('');
+  sec.innerHTML = '<p class="prof-label">' + p.label + '</p><div class="prof-tags">' + tags + '</div>';
+  profBlock.appendChild(sec);
+});
+
+// ══════════════════════════════════════
+// SKILLS
+// ══════════════════════════════════════
+var skillsList = document.getElementById('skills-list');
+allSkills.forEach(function(sk) {
+  var isProf = info.skills.indexOf(sk.name) !== -1;
+  var val    = mod(scores[sk.stat] || 10) + (isProf ? profBonus : 0);
+  var statDef= statDefs.find(function(s){ return s.key === sk.stat; });
+  var row    = document.createElement('div');
+  row.className = 'skill-row';
+  row.innerHTML =
+    '<div class="skill-dot' + (isProf ? ' prof' : '') + '"></div>' +
+    '<span class="skill-stat">' + sk.stat.toUpperCase() + '</span>' +
+    '<span class="skill-name">' + sk.name + '</span>' +
+    '<span class="skill-val">' + fmtMod(val) + '</span>';
+  skillsList.appendChild(row);
+});
+
+// ══════════════════════════════════════
+// INVENTORY
+// ══════════════════════════════════════
+var invItems  = [];
+var coinState = { pp:0, gp:0, ep:0, sp:0, cp:0 };
+
+var statsLookup = {};
+inventoryFull.forEach(function(entry) {
+  if (entry && entry.stats) statsLookup[entry.label] = entry.stats;
+});
+
+(function() {
+  var saved     = null;
+  var equipSave = equipData && equipData.savedAt ? equipData.savedAt : null;
+  try { saved = JSON.parse(localStorage.getItem('pd_inv_state')); } catch(e) {}
+  var shouldSeed = !saved || (equipSave && saved.seededFrom !== equipSave);
+  if (!shouldSeed) {
+    invItems  = saved.items  || [];
+    coinState = saved.coins  || { pp:0, gp:0, ep:0, sp:0, cp:0 };
+  } else {
+    invItems = []; coinState = { pp:0, gp:0, ep:0, sp:0, cp:0 };
+    inventory.forEach(function(name) {
+      var goldMatch = name.match(/^([\d,.]+)\s*₽/);
+      if (goldMatch) { coinState.gp += parseFloat(goldMatch[1].replace(/,/g,'')) || 0; return; }
+      var qtyMatch = name.match(/^(\d+)\s*[×x]\s*(.+)$/i);
+      if (qtyMatch) {
+        var qty = parseInt(qtyMatch[1]) || 1;
+        var nm  = qtyMatch[2].trim();
+        var ex  = invItems.find(function(i){ return i.name.toLowerCase()===nm.toLowerCase(); });
+        if (ex) { ex.qty += qty; } else { invItems.push({ name:nm, qty:qty, stats:statsLookup[name]||null, equipped:false }); }
+        return;
+      }
+      var ex2 = invItems.find(function(i){ return i.name.toLowerCase()===name.toLowerCase(); });
+      if (ex2) { ex2.qty += 1; } else { invItems.push({ name:name, qty:1, stats:statsLookup[name]||null, equipped:false }); }
+    });
+    saveInvState(equipSave);
+  }
+})();
+
+function saveInvState(seededFrom) {
+  var payload = { items:invItems, coins:coinState };
+  if (seededFrom) { payload.seededFrom = seededFrom; }
+  else { try { var ex=JSON.parse(localStorage.getItem('pd_inv_state')); if(ex&&ex.seededFrom) payload.seededFrom=ex.seededFrom; } catch(e){} }
+  try { localStorage.setItem('pd_inv_state', JSON.stringify(payload)); } catch(e) {}
+}
+
+function invIcon(name) {
+  var n = name.toLowerCase();
+  if (n.includes('ball'))    return 'ti-circle';
+  if (n.includes('sword') || n.includes('rapier')) return 'ti-sword';
+  if (n.includes('axe'))     return 'ti-axe';
+  if (n.includes('bow') || n.includes('quiver') || n.includes('dart')) return 'ti-bow-arrow';
+  if (n.includes('slingshot') || n.includes('net') || n.includes('rod')) return 'ti-ripple';
+  if (n.includes('shield'))  return 'ti-shield';
+  if (n.includes('armor') || n.includes('mail') || n.includes('leather') || n.includes('gi') || n.includes('robe') || n.includes('clothes') || n.includes('outfit') || n.includes('wear') || n.includes('swimwear') || n.includes('wraps')) return 'ti-shirt';
+  if (n.includes('pack') || n.includes('pouch') || n.includes('bag')) return 'ti-backpack';
+  if (n.includes('hammer') || n.includes('mace')) return 'ti-hammer';
+  if (n.includes('staff') || n.includes('stick') || n.includes('dagger') || n.includes('quarterstaff')) return 'ti-tool';
+  if (n.includes('book') || n.includes('focus') || n.includes('wand') || n.includes('arcane') || n.includes('spellbook')) return 'ti-book';
+  if (n.includes('tool') || n.includes('kit') || n.includes('tinker') || n.includes('herbalism')) return 'ti-settings';
+  if (n.includes('potion') || n.includes('flask') || n.includes('heal')) return 'ti-droplet';
+  if (n.includes('cook') || n.includes('supplies')) return 'ti-tools-kitchen-2';
+  if (n.includes('climb') || n.includes('gear')) return 'ti-arrows-up';
+  if (n.includes('tent') || n.includes('camp')) return 'ti-tent';
+  if (n.includes('heart') || n.includes('bond')) return 'ti-heart';
+  return 'ti-package';
+}
+
+var coinDefs = [
+  { key:'pp', label:'Platinum (pp)', sub:'1 pp = 10 gp',  cls:'pp', dot:'#cdd8e3' },
+  { key:'gp', label:'Gold (gp)',     sub:'standard',       cls:'gp', dot:'#c9a800' },
+  { key:'ep', label:'Electrum (ep)', sub:'1 gp = 2 ep',   cls:'ep', dot:'#9eb7b8' },
+  { key:'sp', label:'Silver (sp)',   sub:'1 gp = 10 sp',  cls:'sp', dot:'#b0b0b0' },
+  { key:'cp', label:'Copper (cp)',   sub:'1 gp = 100 cp', cls:'cp', dot:'#b87333' },
+];
+
+function recalcAC() {
+  var ea = invItems.find(function(i){ return i.equipped && i.stats && i.stats.category==='armor' && i.stats.ac; });
+  var ac;
+  if (ea) {
+    var t = ea.stats.armorType || '';
+    if (t === 'Light')       { ac = ea.stats.ac + dexMod; }
+    else if (t === 'Medium') { ac = ea.stats.ac + Math.min(dexMod,2); }
+    else                     { ac = ea.stats.ac; }
+  } else {
+    ac = info.unarmoredAC ? (10+conMod+dexMod) : (10+dexMod);
+  }
+  document.getElementById('ac-val').textContent = ac;
+}
+
+function renderCoinSummary() {
+  var s = document.getElementById('coin-summary');
+  s.innerHTML = '';
+  coinDefs.forEach(function(c) {
+    var v = coinState[c.key]||0;
+    if (v===0 && c.key!=='gp') return;
+    var chip = document.createElement('div');
+    chip.className = 'coin-chip '+c.cls;
+    chip.innerHTML = '<div class="coin-dot" style="background:'+c.dot+'"></div><span>'+v+' '+c.key.toUpperCase()+'</span>';
+    s.appendChild(chip);
+  });
+  renderCoinModal();
+}
+
+function renderCoinModal() {
+  var list = document.getElementById('coin-cur-list');
+  if (!list) return;
+  list.innerHTML = '';
+  coinDefs.forEach(function(c) {
+    var row = document.createElement('div');
+    row.className = 'coin-cur-row';
+    row.innerHTML = '<div class="coin-cur-info"><div class="coin-dot" style="width:12px;height:12px;border-radius:50%;background:'+c.dot+';border:1.5px solid var(--black);flex-shrink:0"></div><div><p class="coin-cur-name">'+c.label+'</p><p class="coin-cur-sub">'+c.sub+'</p></div></div><span class="coin-cur-val">'+(coinState[c.key]||0)+'</span>';
+    list.appendChild(row);
+  });
+}
+
+(function() {
+  var grid = document.getElementById('coin-adjust-grid');
+  if (!grid) return;
+  coinDefs.forEach(function(c) {
+    var col = document.createElement('div');
+    col.className = 'coin-adjust-col';
+    col.innerHTML = '<label>'+c.key.toUpperCase()+'</label><input class="coin-adjust-input" id="cadj-'+c.key+'" type="number" min="0" placeholder="0" />';
+    grid.appendChild(col);
+  });
+})();
+
+document.getElementById('coin-add-btn').addEventListener('click', function() {
+  coinDefs.forEach(function(c){ var i=document.getElementById('cadj-'+c.key); coinState[c.key]=(coinState[c.key]||0)+(parseInt(i.value)||0); i.value=''; });
+  saveInvState(); renderCoinSummary(); renderTable();
+});
+document.getElementById('coin-remove-btn').addEventListener('click', function() {
+  coinDefs.forEach(function(c){ var i=document.getElementById('cadj-'+c.key); coinState[c.key]=Math.max(0,(coinState[c.key]||0)-(parseInt(i.value)||0)); i.value=''; });
+  saveInvState(); renderCoinSummary(); renderTable();
+});
+document.getElementById('coin-clear-btn').addEventListener('click', function() {
+  if (!confirm('Clear all coin?')) return;
+  coinDefs.forEach(function(c){ coinState[c.key]=0; });
+  saveInvState(); renderCoinSummary(); renderTable();
+});
+
+function renderTable(filter) {
+  var tbody = document.getElementById('inv-tbody');
+  tbody.innerHTML = '';
+  var q = (filter||'').toLowerCase();
+  var shown = invItems.filter(function(it){ return !q||it.name.toLowerCase().includes(q); });
+  if (shown.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="5" class="inv-empty">'+(invItems.length===0?'No items yet -- use Manage Inventory to add gear.':'No items match your search.')+'</td>';
+    tbody.appendChild(tr); return;
+  }
+  var hdr = document.createElement('tr');
+  hdr.className = 'inv-section-header';
+  hdr.innerHTML = '<td colspan="5">EQUIPMENT ('+shown.length+')</td>';
+  tbody.appendChild(hdr);
+  shown.forEach(function(item) {
+    var ri = invItems.indexOf(item);
+    var hs = item.stats && item.stats.category;
+    var iw = hs && item.stats.category==='weapon';
+    var ia = hs && item.stats.category==='armor';
+    var sid = 'sr-'+ri;
+    var ec = '';
+    if (iw||ia) {
+      var bc = item.equipped ? (ia?'inv-equip-btn equipped-armor':'inv-equip-btn equipped') : 'inv-equip-btn';
+      ec = '<td class="inv-equip-cell"><button class="'+bc+'" data-idx="'+ri+'" aria-label="'+(item.equipped?'Unequip':'Equip')+' '+item.name+'"><i class="ti ti-check" aria-hidden="true"></i></button></td>';
+    } else { ec = '<td class="inv-equip-cell"></td>'; }
+    var ss = '';
+    if (hs) {
+      ss = '<div class="inv-item-sub" style="font-size:10px;color:var(--gray);cursor:pointer;" data-toggle="'+sid+'">'
+        + (iw ? item.stats.damage+' '+item.stats.damageType : 'AC '+item.stats.ac+' '+item.stats.armorType)
+        + ' <span style="color:var(--gray-lt)">v</span></div>';
+    }
+    var en = item.equipped ? ' <span style="font-size:10px;color:var(--gray);font-style:italic;">'+(ia?'(worn)':'(equipped)')+'</span>' : '';
+    var tr = document.createElement('tr');
+    tr.innerHTML = ec
+      +'<td class="inv-td-icon"><i class="ti '+invIcon(item.name)+'" aria-hidden="true"></i></td>'
+      +'<td><div class="inv-item-name">'+item.name+en+'</div>'+ss+'</td>'
+      +'<td class="inv-td-qty">'+item.qty+'</td>'
+      +'<td class="inv-td-del"><button class="inv-del-btn" data-idx="'+ri+'" aria-label="Remove '+item.name+'"><i class="ti ti-trash" aria-hidden="true"></i></button></td>';
+    tbody.appendChild(tr);
+    if (hs) {
+      var str = document.createElement('tr');
+      str.className = 'inv-stat-row'; str.id = sid;
+      var chips = '';
+      if (iw) chips += '<span class="inv-stat-chip weapon">'+item.stats.damage+' '+item.stats.damageType+'</span>';
+      if (ia) { chips += '<span class="inv-stat-chip armor">AC '+item.stats.ac+'</span><span class="inv-stat-chip armor">'+item.stats.armorType+'</span>'; }
+      if (item.stats.properties) {
+        item.stats.properties.split(',').forEach(function(p){ chips += '<span class="inv-stat-chip prop">'+p.trim()+'</span>'; });
+      }
+      str.innerHTML = '<td colspan="5"><div class="inv-stat-drawer"><div class="inv-stat-chips">'+chips+'</div></div></td>';
+      tbody.appendChild(str);
+    }
+  });
+}
+
+document.getElementById('inv-tbody').addEventListener('click', function(e) {
+  var db = e.target.closest('.inv-del-btn');
+  if (db) { invItems.splice(parseInt(db.getAttribute('data-idx')),1); saveInvState(); renderTable(document.getElementById('inv-search').value); recalcAC(); return; }
+  var eb = e.target.closest('.inv-equip-btn');
+  if (eb) {
+    var idx=parseInt(eb.getAttribute('data-idx')), item=invItems[idx];
+    if (!item) return;
+    if (!item.equipped && item.stats && item.stats.category==='armor') {
+      invItems.forEach(function(i){ if(i!==item&&i.stats&&i.stats.category==='armor') i.equipped=false; });
+    }
+    item.equipped = !item.equipped;
+    saveInvState(); renderTable(document.getElementById('inv-search').value); recalcAC(); return;
+  }
+  var tg = e.target.closest('[data-toggle]');
+  if (tg) { var r=document.getElementById(tg.getAttribute('data-toggle')); if(r) r.classList.toggle('open'); }
+});
+
+document.getElementById('inv-search').addEventListener('input', function(){ renderTable(this.value); });
+
+document.getElementById('add-item-btn').addEventListener('click', function() {
+  var ne=document.getElementById('add-item-name'), qe=document.getElementById('add-item-qty');
+  var name=ne.value.trim(), qty=parseInt(qe.value)||1;
+  if (!name) { ne.focus(); return; }
+  var ex=invItems.find(function(i){ return i.name.toLowerCase()===name.toLowerCase(); });
+  if (ex) { ex.qty+=qty; } else { invItems.push({name:name,qty:qty,stats:null,equipped:false}); }
+  ne.value=''; qe.value='1';
+  saveInvState(); renderTable(document.getElementById('inv-search').value);
+  toast('ADDED: '+name+' x'+qty);
+});
+
+document.getElementById('add-item-name').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('add-item-btn').click(); });
+
+document.getElementById('manage-inv-btn').addEventListener('click', function(){ document.getElementById('inv-modal-overlay').classList.add('visible'); renderCoinModal(); });
+document.getElementById('inv-modal-close').addEventListener('click', function(){ document.getElementById('inv-modal-overlay').classList.remove('visible'); });
+document.getElementById('inv-modal-overlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('visible'); });
+
+['add','coin'].forEach(function(key) {
+  var t=document.getElementById('sect-'+key+'-trigger'), b=document.getElementById('sect-'+key+'-body');
+  if(!t||!b) return;
+  t.addEventListener('click', function(){ var o=t.classList.contains('open'); t.classList.toggle('open',!o); b.classList.toggle('open',!o); });
+});
+
+renderCoinSummary();
+renderTable();
+recalcAC();
+
+// ══════════════════════════════════════
+// BACKGROUND TAB — restore saved values
+// ══════════════════════════════════════
+if (trainerName)     document.getElementById('bg-name').value    = trainerName;
+else if (savedBg.name) document.getElementById('bg-name').value  = savedBg.name;
+if (savedBg.origin)  document.getElementById('bg-origin').value  = savedBg.origin;
+if (savedBg.tid)     document.getElementById('bg-tid').value     = savedBg.tid;
+if (savedBg.trait)   document.getElementById('bg-trait').value   = savedBg.trait;
+if (savedBg.ideal)   document.getElementById('bg-ideal').value   = savedBg.ideal;
+if (savedBg.bond)    document.getElementById('bg-bond').value    = savedBg.bond;
+if (savedBg.flaw)    document.getElementById('bg-flaw').value    = savedBg.flaw;
+
+document.getElementById('save-bg-btn').addEventListener('click', function() {
+  var bg = {
+    name:   document.getElementById('bg-name').value,
+    origin: document.getElementById('bg-origin').value,
+    tid:    document.getElementById('bg-tid').value,
+    trait:  document.getElementById('bg-trait').value,
+    ideal:  document.getElementById('bg-ideal').value,
+    bond:   document.getElementById('bg-bond').value,
+    flaw:   document.getElementById('bg-flaw').value,
+  };
+  try { localStorage.setItem('pd_background', JSON.stringify(bg)); } catch(e) {}
+  // Keep trainer name in sync
+  if (bg.name) {
+    try { localStorage.setItem('pd_trainer_name', bg.name); } catch(e) {}
+    document.getElementById('hero-name').textContent = bg.name;
+  }
+  toast('PROFILE SAVED ✓');
+});
+
+// ══════════════════════════════════════
+// NOTES TAB
+// ══════════════════════════════════════
+document.getElementById('notes-area').value = savedNotes;
+document.getElementById('save-notes-btn').addEventListener('click', function() {
+  try { localStorage.setItem('pd_notes', document.getElementById('notes-area').value); } catch(e) {}
+  toast('NOTES SAVED ✓');
+});
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b)  { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ══════════════════════════════════════
+// AVATAR UPLOAD + CROP
+// ══════════════════════════════════════
+(function() {
+  var avatarBtn   = document.getElementById('hero-avatar');
+  var fileInput   = document.getElementById('avatar-file-input');
+  var overlay     = document.getElementById('crop-overlay');
+  var canvas      = document.getElementById('crop-canvas');
+  var ctx         = canvas.getContext('2d');
+  var zoomSlider  = document.getElementById('crop-zoom');
+  var wrap        = document.getElementById('crop-canvas-wrap');
+
+  var img         = new Image();
+  var scale       = 1;
+  var offsetX     = 0;
+  var offsetY     = 0;
+  var dragStart   = null;
+  var dragOffStart= null;
+  var SIZE        = 400; // internal canvas resolution
+
+  canvas.width  = SIZE;
+  canvas.height = SIZE;
+
+  // Restore saved avatar on load
+  var savedAvatar = null;
+  try { savedAvatar = localStorage.getItem('pd_avatar'); } catch(e) {}
+  if (savedAvatar) setAvatarImage(savedAvatar);
+
+  // Open file picker on avatar click
+  avatarBtn.addEventListener('click', function() { fileInput.click(); });
+  avatarBtn.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+
+  fileInput.addEventListener('change', function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      img.onload = function() {
+        // reset pan/zoom
+        scale   = 1;
+        offsetX = 0;
+        offsetY = 0;
+        zoomSlider.value = '1';
+        fitImage();
+        openModal();
+        draw();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    // clear so same file can be re-selected
+    fileInput.value = '';
+  });
+
+  function fitImage() {
+    // start zoom so image fills the circle
+    var shorter = Math.min(img.naturalWidth, img.naturalHeight);
+    scale = SIZE / shorter;
+    offsetX = (SIZE - img.naturalWidth  * scale) / 2;
+    offsetY = (SIZE - img.naturalHeight * scale) / 2;
+    zoomSlider.min = String((SIZE / Math.max(img.naturalWidth, img.naturalHeight)).toFixed(2));
+    zoomSlider.value = String(scale.toFixed(2));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.drawImage(img, offsetX, offsetY, img.naturalWidth * scale, img.naturalHeight * scale);
+  }
+
+  // ── Zoom slider ──
+  zoomSlider.addEventListener('input', function() {
+    var newScale = parseFloat(zoomSlider.value);
+    // zoom toward center
+    var cx = SIZE / 2, cy = SIZE / 2;
+    offsetX = cx - (cx - offsetX) * (newScale / scale);
+    offsetY = cy - (cy - offsetY) * (newScale / scale);
+    scale = newScale;
+    clampOffset();
+    draw();
+  });
+
+  // ── Drag to pan (mouse) ──
+  wrap.addEventListener('mousedown', function(e) {
+    dragStart    = { x: e.clientX, y: e.clientY };
+    dragOffStart = { x: offsetX, y: offsetY };
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!dragStart) return;
+    var ratio = SIZE / wrap.getBoundingClientRect().width;
+    offsetX = dragOffStart.x + (e.clientX - dragStart.x) * ratio;
+    offsetY = dragOffStart.y + (e.clientY - dragStart.y) * ratio;
+    clampOffset();
+    draw();
+  });
+  window.addEventListener('mouseup', function() { dragStart = null; });
+
+  // ── Drag to pan (touch) ──
+  wrap.addEventListener('touchstart', function(e) {
+    var t = e.touches[0];
+    dragStart    = { x: t.clientX, y: t.clientY };
+    dragOffStart = { x: offsetX, y: offsetY };
+  }, { passive: true });
+  wrap.addEventListener('touchmove', function(e) {
+    if (!dragStart) return;
+    var t = e.touches[0];
+    var ratio = SIZE / wrap.getBoundingClientRect().width;
+    offsetX = dragOffStart.x + (t.clientX - dragStart.x) * ratio;
+    offsetY = dragOffStart.y + (t.clientY - dragStart.y) * ratio;
+    clampOffset();
+    draw();
+  }, { passive: true });
+  wrap.addEventListener('touchend', function() { dragStart = null; });
+
+  // ── Pinch-to-zoom (touch) ──
+  var lastPinchDist = null;
+  wrap.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) lastPinchDist = pinchDist(e);
+  }, { passive: true });
+  wrap.addEventListener('touchmove', function(e) {
+    if (e.touches.length !== 2 || !lastPinchDist) return;
+    var dist = pinchDist(e);
+    var delta = dist / lastPinchDist;
+    var newScale = Math.min(Math.max(scale * delta, parseFloat(zoomSlider.min)), 3);
+    var cx = SIZE / 2, cy = SIZE / 2;
+    offsetX = cx - (cx - offsetX) * (newScale / scale);
+    offsetY = cy - (cy - offsetY) * (newScale / scale);
+    scale = newScale;
+    zoomSlider.value = String(scale.toFixed(2));
+    lastPinchDist = dist;
+    clampOffset();
+    draw();
+  }, { passive: true });
+  wrap.addEventListener('touchend', function() { lastPinchDist = null; });
+
+  function pinchDist(e) {
+    var dx = e.touches[0].clientX - e.touches[1].clientX;
+    var dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function clampOffset() {
+    // keep image covering the canvas at all times
+    var iw = img.naturalWidth  * scale;
+    var ih = img.naturalHeight * scale;
+    if (iw >= SIZE) {
+      if (offsetX > 0) offsetX = 0;
+      if (offsetX + iw < SIZE) offsetX = SIZE - iw;
+    } else {
+      offsetX = (SIZE - iw) / 2;
+    }
+    if (ih >= SIZE) {
+      if (offsetY > 0) offsetY = 0;
+      if (offsetY + ih < SIZE) offsetY = SIZE - ih;
+    } else {
+      offsetY = (SIZE - ih) / 2;
+    }
+  }
+
+  // ── Modal open/close ──
+  function openModal()  { overlay.classList.add('visible'); }
+  function closeModal() { overlay.classList.remove('visible'); }
+
+  document.getElementById('crop-close').addEventListener('click', closeModal);
+  document.getElementById('crop-cancel').addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+
+  // ── Confirm crop → produce circular avatar ──
+  document.getElementById('crop-confirm').addEventListener('click', function() {
+    // Draw circular clip onto an offscreen canvas
+    var out    = document.createElement('canvas');
+    out.width  = SIZE;
+    out.height = SIZE;
+    var octx   = out.getContext('2d');
+    octx.beginPath();
+    octx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2);
+    octx.closePath();
+    octx.clip();
+    octx.drawImage(canvas, 0, 0);
+
+    var dataURL = out.toDataURL('image/jpeg', 0.88);
+    try { localStorage.setItem('pd_avatar', dataURL); } catch(e) {}
+    setAvatarImage(dataURL);
+    closeModal();
+  });
+
+  function setAvatarImage(src) {
+    var placeholder = document.getElementById('avatar-placeholder');
+    if (placeholder) placeholder.style.display = 'none';
+    // Remove any existing img
+    var existing = avatarBtn.querySelector('img');
+    if (existing) existing.remove();
+    var el = document.createElement('img');
+    el.src = src;
+    el.alt = 'Trainer photo';
+    avatarBtn.appendChild(el);
+  }
+})();
+
+
+
+
+    
+
+
+    // ── Generate snow flakes ──
+    (function() {
+      var layer = document.getElementById('snow-bg') || document.getElementById('snow-layer');
+      if (!layer || layer.children.length > 0) return;
+      var cls = layer.id === 'snow-bg' ? 'sf' : 'flake';
+      for (var i = 0; i < 35; i++) {
+        var f = document.createElement('div');
+        f.className = cls;
+        var sz = 1.5 + Math.random() * 3;
+        f.style.left = Math.random() * 100 + 'vw';
+        f.style.width  = sz + 'px';
+        f.style.height = sz + 'px';
+        f.style.animationDuration = (10 + Math.random() * 20) + 's';
+        f.style.animationDelay    = -(Math.random() * 25) + 's';
+        layer.appendChild(f);
+      }
+    })();
+
+    // ── Snow toggle ──
+    (function() {
+      var layer = document.getElementById('snow-bg') || document.getElementById('snow-layer');
+      var btn   = document.getElementById('snow-toggle');
+      var lbl   = document.getElementById('snow-toggle-label') || document.getElementById('snow-label');
+      var on    = true;
+      try { on = localStorage.getItem('pd_snow') !== 'off'; } catch(e) {}
+      function apply(val) {
+        on = val;
+        if (layer) layer.style.display = val ? '' : 'none';
+        if (lbl)   lbl.textContent = val ? 'SNOW ON' : 'SNOW OFF';
+        if (btn)   btn.classList.toggle('snow-off', !val);
+        try { localStorage.setItem('pd_snow', val ? 'on' : 'off'); } catch(e) {}
+      }
+      apply(on);
+      if (btn) btn.addEventListener('click', function() { apply(!on); });
+    })();
+
+    // ── Rotating taglines ──
+    (function() {
+      var taglines = [
+        "The cold never sleeps.",
+        "Even Magikarp fear what stirs beneath the ice.",
+        "Something ancient has been woken. It is not happy.",
+        "Roll for Sanity. Fail for flavor.",
+        "Your starter is scared. You should be too.",
+        "Not all blizzards are natural.",
+        "The cult thought they were in control. They were wrong.",
+        "It's a Pokemon world. The horror is optional.",
+        "Somewhere in the snow, something remembers your name.",
+        "Pack a Burn Heal. You won't need it.",
+        "The storm doesn't end. It spreads.",
+        "The Pokedex has no entry for what's coming.",
+        "Gotta roll 'em all!",
+        "The journey of a thousand miles begins with a single Poke Ball.",
+        "Every trainer was a Village Sprout once. Some still are.",
+        "Your Pokemon believe in you. That has to count for something.",
+        "Adventure is out there - and it brought snacks!"
+      ];
+      var el = document.getElementById('footer-tagline');
+      if (el) el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
+    })();
+
+</script>
+</body>
+</html>

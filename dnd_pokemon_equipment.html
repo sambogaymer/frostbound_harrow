@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon & Dragons — Starting Equipment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:       #E3350D;
+      --red-dark:  #b02a0a;
+      --white:     #FAFAFA;
+      --off-white: #F0EDE8;
+      --black:     #1a1a1a;
+      --gray:      #6b6b6b;
+      --gray-lt:   #d4d0c8;
+    }
+    body { background-color: var(--off-white); color: var(--black); font-family: 'Nunito', sans-serif; min-height: 100vh; }
+
+    .top-stripe { position: fixed; top: 0; left: 0; right: 0; height: 10px; background: var(--red); z-index: 100; }
+    .top-stripe::after { content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 4px; background: var(--black); }
+
+    .pokeball-bg { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 420px; height: 420px; opacity: 0.05; pointer-events: none; animation: slow-spin 60s linear infinite; z-index: 0; }
+    @keyframes slow-spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+    @keyframes fade-up { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+
+    .page { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 4rem 1.25rem 3rem; }
+
+    /* ── Header ── */
+    .header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.4rem; animation: fade-up 0.5s ease both; }
+    .header-text h1 { font-family: 'Press Start 2P', monospace; font-size: clamp(9px,2vw,13px); color: var(--red); text-shadow: 2px 2px 0 var(--red-dark); line-height: 1.5; }
+    .header-text p  { font-size: 13px; color: var(--gray); font-style: italic; margin-top: 4px; }
+
+    .save-btn {
+      margin-left: auto;
+      background: var(--red);
+      color: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 10px;
+      padding: 0 18px;
+      height: 40px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: 3px 3px 0 var(--black);
+      transition: background 0.13s, transform 0.1s, box-shadow 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .save-btn:hover { background: var(--red-dark); transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--black); }
+    .save-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--black); }
+
+    /* ── Divider ── */
+    .dex-divider { display: flex; align-items: center; gap: 10px; margin: 1.1rem 0 1.5rem; animation: fade-up 0.5s 0.05s ease both; }
+    .dex-divider-line { flex: 1; height: 2px; background: var(--black); }
+    .dex-divider-dot  { width: 10px; height: 10px; border-radius: 50%; background: var(--red); border: 2px solid var(--black); }
+    .dex-divider-dot.small { width: 6px; height: 6px; }
+
+    /* ── Class accordion row ── */
+    .class-block { margin-bottom: 12px; animation: fade-up 0.4s ease both; }
+    .class-block:nth-child(1)  { animation-delay: 0.07s; }
+    .class-block:nth-child(2)  { animation-delay: 0.11s; }
+    .class-block:nth-child(3)  { animation-delay: 0.15s; }
+    .class-block:nth-child(4)  { animation-delay: 0.19s; }
+    .class-block:nth-child(5)  { animation-delay: 0.23s; }
+    .class-block:nth-child(6)  { animation-delay: 0.27s; }
+    .class-block:nth-child(7)  { animation-delay: 0.31s; }
+    .class-block:nth-child(8)  { animation-delay: 0.35s; }
+    .class-block:nth-child(9)  { animation-delay: 0.39s; }
+    .class-block:nth-child(10) { animation-delay: 0.43s; }
+    .class-block:nth-child(11) { animation-delay: 0.47s; }
+    .class-block:nth-child(12) { animation-delay: 0.51s; }
+    .class-block:nth-child(13) { animation-delay: 0.55s; }
+
+    .class-trigger {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-radius: 14px;
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 var(--black);
+      transition: transform 0.13s, box-shadow 0.13s, border-radius 0.2s;
+      position: relative; overflow: hidden;
+      user-select: none;
+    }
+    .class-trigger::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); border-radius: 11px 0 0 11px; }
+    .class-trigger.open { border-radius: 14px 14px 0 0; border-bottom-color: var(--gray-lt); transform: none !important; box-shadow: 3px 0 0 var(--black); }
+    .class-trigger.open::before { border-radius: 11px 0 0 0; }
+    .class-trigger:hover:not(.open) { transform: translate(-2px,-2px); box-shadow: 5px 5px 0 var(--black); }
+
+    .trigger-icon { width: 52px; height: 52px; border-radius: 10px; border: 2px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--accent); flex-shrink: 0; margin-left: 6px; }
+    .trigger-info { flex: 1; }
+    .trigger-name { font-family: 'Press Start 2P', monospace; font-size: clamp(8px,1.8vw,11px); color: var(--black); line-height: 1.5; }
+    .trigger-sub  { font-size: 12px; color: var(--gray); font-style: italic; margin-top: 4px; }
+
+    .trigger-badge {
+      font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 2px 9px; border-radius: 999px; color: #fff; background: var(--accent);
+      flex-shrink: 0;
+    }
+    .trigger-badge.dark-text { color: #333; }
+
+    .trigger-chevron { font-size: 20px; color: var(--accent); flex-shrink: 0; transition: transform 0.25s ease; }
+    .class-trigger.open .trigger-chevron { transform: rotate(90deg); }
+
+    /* ── Equipment panel ── */
+    .equip-panel {
+      background: var(--white);
+      border: 2.5px solid var(--black);
+      border-top: none;
+      border-radius: 0 0 14px 14px;
+      box-shadow: 3px 3px 0 var(--black);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+    .equip-panel.open { max-height: 800px; }
+
+    .equip-inner { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── Option group (non-clickable header + selectable sub-boxes) ── */
+    .option-group { display: flex; flex-direction: column; gap: 0; }
+
+    .option-group-label {
+      font-family: 'Press Start 2P', monospace; font-size: 8px;
+      color: var(--black); letter-spacing: 0.04em;
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── Package sub-box ── */
+    .pkg-box {
+      border: 2px solid var(--black);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      background: var(--off-white);
+      transition: background 0.13s, border-color 0.13s, transform 0.1s, box-shadow 0.1s;
+      position: relative;
+    }
+
+    /* selectable variant */
+    .pkg-box.selectable {
+      cursor: pointer;
+      padding-left: 2.4rem; /* room for check icon */
+      box-shadow: 2px 2px 0 var(--black);
+    }
+    .pkg-box.selectable:hover {
+      background: #fff;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 var(--black);
+    }
+    .pkg-box.selectable:active {
+      transform: translate(1px, 1px);
+      box-shadow: none;
+    }
+    .pkg-box.selectable.selected {
+      background: #fff4f2;
+      border-color: var(--red);
+      border-width: 2.5px;
+    }
+
+    /* check icon inside box */
+    .pkg-check {
+      position: absolute; left: 0.65rem; top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px; color: var(--red);
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .pkg-box.selectable.selected .pkg-check { opacity: 1; }
+
+    .item-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .item-pill {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 999px;
+      background: var(--white); border: 1.5px solid var(--gray-lt);
+      color: var(--black);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .item-pill i { font-size: 13px; color: var(--gray); }
+    .item-pill.gold { background: #fdf9e0; border-color: #c9a800; color: #7a6000; }
+    .item-pill.gold i { color: #c9a800; }
+
+    /* or separator — between pkg-boxes inside an option group */
+    .or-sep-inner {
+      text-align: center;
+      font-family: 'Press Start 2P', monospace; font-size: 7px;
+      color: var(--gray-lt); margin: 6px 0;
+    }
+
+    /* or separator — between Option A and Option B groups */
+    .or-sep { text-align: center; font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gray-lt); margin: 4px 0; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 2rem; font-size: 11px; color: var(--gray); text-align: center; font-style: italic; }
+    .footer strong { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--red); font-style: normal; }
+
+    /* ════════ FROST THEME ════════ */
+    :root {
+      --red:        #E3350D;
+      --red-dark:   #b02a0a;
+      --white:      #1e2d3a;
+      --off-white:  #172330;
+      --black:      #d6eef8;
+      --gray:       #7bafc8;
+      --gray-lt:    #2e4a5e;
+      --frost:      #a8d8ea;
+      --frost-dark: #5b9bb5;
+      --ice:        #d6eef8;
+      --void:       #0d1e2b;
+      --void-mid:   #112233;
+      --accent:     #3a9abf;
+    }
+
+    body {
+      background: linear-gradient(175deg, #0d1e2b 0%, #0f2235 50%, #091825 100%) !important;
+      color: var(--ice) !important;
+      position: relative;
+    }
+
+    /* faint snow layer */
+    .snow-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .snow-bg .sf {
+      position: absolute; top: -10px; border-radius: 50%;
+      background: rgba(200,230,255,0.55);
+      animation: sf-fall linear infinite;
+    }
+    @keyframes sf-fall {
+      0%   { transform: translateY(-10px) translateX(0);   opacity: 0; }
+      8%   { opacity: 0.7; }
+      92%  { opacity: 0.4; }
+      100% { transform: translateY(105vh) translateX(30px); opacity: 0; }
+    }
+
+    /* top stripe — icy */
+    .top-stripe {
+      background: linear-gradient(90deg, #1a5f7a, #3a9abf, #1a5f7a) !important;
+    }
+    .top-stripe::after {
+      background: rgba(168,216,234,0.35) !important;
+    }
+
+    /* cards / panel cards */
+    .panel-card, .dnd-card, .class-row, .name-card,
+    .collapse-row, .equip-panel, .dropdown-panel,
+    .stat-box, .combat-box, .points-card, .stat-card,
+    .class-block .class-trigger, .class-block .equip-panel,
+    .inv-modal, .selected-banner, .option-group,
+    .pkg-box, .hero-banner, .tab-btn, .card {
+      background: rgba(255,255,255,0.04) !important;
+      border-color: rgba(168,216,234,0.2) !important;
+      color: var(--ice) !important;
+    }
+
+    .panel-card::before  { background: var(--frost-dark) !important; }
+    .hero-banner::before { background: var(--frost-dark) !important; }
+    .class-row::before, .collapse-row::before, .name-card::before { background: var(--frost-dark) !important; }
+    .stat-box::before    { background: var(--sc) !important; }
+    .combat-box::before  { background: var(--frost-dark) !important; }
+    .points-card::before { background: var(--frost-dark) !important; }
+    .stat-card::before   { background: var(--stat-color) !important; }
+
+    /* box shadows — icy */
+    .panel-card, .hero-banner, .class-row, .name-card,
+    .stat-box, .combat-box, .points-card, .stat-card,
+    .collapse-row, .selected-banner {
+      box-shadow: 3px 3px 0 rgba(58,154,191,0.3) !important;
+    }
+
+    /* text colours */
+    .panel-card-title, .class-name, .stat-mod, .cb-value,
+    .hp-current, .tab-btn.active, .poke-name, .trigger-name,
+    .option-group-label, .collapse-title, .hero-name,
+    .points-remaining, .stat-value, .dnd-title, .main-title,
+    h1, .header-text h1 {
+      color: var(--ice) !important;
+    }
+
+    .hero-sub, .class-source, .collapse-subtitle, .trigger-sub,
+    .card-desc, .subtitle, .cost-label, .stat-name,
+    .cb-sub, .mod-label, .poke-types, .inv-item-sub,
+    .footer, .class-source {
+      color: var(--gray) !important;
+    }
+
+    /* inputs */
+    .name-card-input, .inv-search, .notes-area, .bg-input,
+    .inv-form-input, .coin-adjust-input, .hp-input,
+    .stat-btn, .inv-search-wrap {
+      background: rgba(255,255,255,0.06) !important;
+      border-color: rgba(168,216,234,0.25) !important;
+      color: var(--ice) !important;
+    }
+    .name-card-input:focus, .inv-search:focus,
+    .notes-area:focus, .bg-input:focus, .inv-form-input:focus { border-color: var(--frost) !important; }
+
+    /* tabs */
+    .tab-btn {
+      background: rgba(255,255,255,0.05) !important;
+      border-color: rgba(168,216,234,0.2) !important;
+      color: var(--gray) !important;
+    }
+    .tab-btn.active {
+      background: var(--frost-dark) !important;
+      color: var(--ice) !important;
+      border-color: var(--frost-dark) !important;
+    }
+    .tab-btn:hover:not(.active) { background: rgba(168,216,234,0.1) !important; }
+
+    /* buttons */
+    .next-btn, .save-btn, .rest-btn, .manage-inv-btn,
+    .reset-btn, .back-btn, .home-btn {
+      background: rgba(58,154,191,0.25) !important;
+      border-color: rgba(168,216,234,0.35) !important;
+      color: var(--ice) !important;
+      box-shadow: 2px 2px 0 rgba(58,154,191,0.2) !important;
+    }
+    .next-btn:hover, .save-btn:hover, .rest-btn:hover,
+    .manage-inv-btn:hover, .reset-btn:hover, .home-btn:hover {
+      background: var(--frost-dark) !important;
+    }
+
+    /* stat buttons (+ / -) */
+    .stat-btn {
+      background: rgba(58,154,191,0.3) !important;
+      border-color: rgba(168,216,234,0.3) !important;
+      color: var(--ice) !important;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.3) !important;
+    }
+    .stat-btn:hover:not(:disabled) { background: var(--frost-dark) !important; }
+    .stat-btn:disabled { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: rgba(255,255,255,0.2) !important; }
+
+    /* score chips on stat bar */
+    .stat-score-chip { border-color: rgba(0,0,0,0.4) !important; }
+
+    /* stat mod row bg */
+    .stat-mod-row { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.15) !important; }
+
+    /* save button (equipment) — keep it distinct */
+    .save-btn {
+      background: var(--frost-dark) !important;
+      border-color: var(--frost) !important;
+    }
+    .save-btn:hover { background: var(--accent) !important; }
+
+    /* type badges — keep their own colors */
+    .type-badge, .trigger-badge, .badge, .hero-badge,
+    .card-type-badge { color: #fff !important; }
+
+    /* inv rows */
+    .inv-row, .inv-table tbody tr:hover { background: rgba(255,255,255,0.05) !important; }
+    .inv-stat-drawer { background: rgba(255,255,255,0.04) !important; }
+    .inv-stat-chip.prop { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--gray) !important; }
+
+    /* prof tags */
+    .prof-tag { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+
+    /* skill / throw rows */
+    .throw-row, .sense-chip { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.15) !important; }
+    .inv-row { background: rgba(255,255,255,0.04) !important; border-color: rgba(168,216,234,0.12) !important; }
+
+    /* pokemon rows */
+    .poke-row:hover { background: rgba(168,216,234,0.07) !important; }
+    .poke-row.selected { background: rgba(58,154,191,0.15) !important; border-left-color: var(--frost) !important; }
+    .poke-row.selected .poke-name { color: var(--frost) !important; }
+
+    /* class row selected */
+    .class-row.selected { background: rgba(58,154,191,0.12) !important; border-color: var(--frost-dark) !important; }
+    .class-row.selected .class-name { color: var(--frost) !important; }
+
+    /* option / pkg boxes */
+    .pkg-box.selectable:hover { background: rgba(168,216,234,0.08) !important; }
+    .pkg-box.selectable.selected { background: rgba(58,154,191,0.15) !important; border-color: var(--frost) !important; }
+
+    /* item pills */
+    .item-pill { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+    .item-pill i { color: var(--gray) !important; }
+
+    /* coin chips */
+    .coin-chip { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; }
+
+    /* points bar track */
+    .points-bar-wrap { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.2) !important; }
+
+    /* dividers */
+    .dex-divider-line { background: rgba(168,216,234,0.25) !important; }
+    .dex-divider-dot  { background: var(--frost-dark) !important; border-color: var(--frost) !important; box-shadow: 0 0 6px var(--frost-dark); }
+
+    /* section headers in table */
+    .inv-section-header td { border-bottom-color: rgba(168,216,234,0.3) !important; }
+
+    /* poke-dex numbers */
+    .poke-dex { color: rgba(168,216,234,0.2) !important; }
+
+    /* cost badge */
+    .cost-badge { color: #fff !important; }
+
+    /* equip button unselected */
+    .inv-equip-btn { background: rgba(255,255,255,0.06) !important; border-color: rgba(168,216,234,0.25) !important; }
+
+    /* modal overlays */
+    .crop-modal, .inv-modal {
+      background: #132030 !important;
+      border-color: rgba(168,216,234,0.3) !important;
+    }
+    .inv-modal-head { background: #132030 !important; border-bottom-color: rgba(168,216,234,0.2) !important; }
+    .inv-modal-section-title { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.2) !important; color: var(--ice) !important; }
+    .inv-modal-section-title.open { background: rgba(58,154,191,0.15) !important; }
+    .coin-cur-row { background: rgba(255,255,255,0.05) !important; border-color: rgba(168,216,234,0.12) !important; }
+    .coin-cur-name { color: var(--ice) !important; }
+
+    /* scrollbars */
+    * { scrollbar-color: var(--frost-dark) rgba(255,255,255,0.05); }
+    *::-webkit-scrollbar-track { background: rgba(255,255,255,0.04) !important; }
+    *::-webkit-scrollbar-thumb { background: var(--frost-dark) !important; }
+
+    /* hp sep */
+    .hp-sep, .hp-max, .points-sep, .points-total-num { color: rgba(168,216,234,0.35) !important; }
+
+    /* or-sep */
+    .or-sep, .or-sep-inner { color: rgba(168,216,234,0.25) !important; }
+
+    /* selected banner */
+    .selected-banner.visible { background: rgba(255,255,255,0.05) !important; }
+    .banner-name { color: var(--ice) !important; }
+
+    /* bg-modal form labels */
+    .bg-field label, .inv-form-field label, .coin-adjust-col label,
+    .name-card-label, .crop-zoom-label { color: var(--gray) !important; }
+
+    /* pokeball watermark tint */
+    .pokeball-bg svg path { fill: #2a7fa0 !important; }
+    .pokeball-bg svg circle:first-child { stroke: rgba(168,216,234,0.3) !important; }
+
+    /* footer strong */
+    .footer strong { color: var(--frost-dark) !important; }
+    /* ════════ END FROST THEME ════════ */
+
+    /* ── Snow toggle button ── */
+    .snow-toggle {
+      position: fixed;
+      bottom: 1.2rem;
+      right: 1.2rem;
+      z-index: 200;
+      background: rgba(13,30,43,0.85);
+      border: 1.5px solid rgba(168,216,234,0.3);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: rgba(168,216,234,0.7);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(6px);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    .snow-toggle:hover {
+      border-color: rgba(168,216,234,0.6);
+      color: rgba(168,216,234,1);
+      background: rgba(20,45,65,0.95);
+    }
+    .snow-toggle.snow-off {
+      opacity: 0.5;
+    }
+    .snow-toggle .snow-icon {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-stripe"></div>
+<div class="snow-bg" id="snow-bg" aria-hidden="true"></div>
+
+<div class="pokeball-bg" aria-hidden="true">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="96" fill="none" stroke="#1a1a1a" stroke-width="8"/>
+    <path d="M 4 100 A 96 96 0 0 1 196 100 Z" fill="#E3350D"/>
+    <rect x="4" y="91" width="192" height="18" fill="#1a1a1a"/>
+    <circle cx="100" cy="100" r="22" fill="#1a1a1a"/>
+    <circle cx="100" cy="100" r="14" fill="#FAFAFA"/>
+    <circle cx="100" cy="100" r="6" fill="#1a1a1a"/>
+  </svg>
+</div>
+
+<div class="page">
+  <div class="header">
+    <div class="header-text">
+      <h1>Starting Equipment</h1>
+      <p>Choose your loadout before the adventure begins</p>
+    </div>
+    <button class="save-btn" id="save-btn">
+      <i class="ti ti-device-floppy" aria-hidden="true"></i>
+      SAVE &amp; VIEW CHARACTER
+    </button>
+  </div>
+
+  <div class="dex-divider" aria-hidden="true">
+    <div class="dex-divider-line"></div>
+    <div class="dex-divider-dot small"></div>
+    <div class="dex-divider-dot"></div>
+    <div class="dex-divider-dot small"></div>
+    <div class="dex-divider-line"></div>
+  </div>
+
+  <div id="class-list"></div>
+
+  <p class="footer"><strong>v0.1.0</strong> &nbsp;&middot;&nbsp; <span id="footer-tagline"></span></p>
+</div>
+
+<script>
+// ── Equipment data ──
+// Each class has 2 options; each option has 2 "packages" (A or B separated by OR)
+// items: array of { label, icon, gold? }
+const classData = [
+  {
+    name: 'Seasoned Rival', icon: 'ti-star', accent: '#D62828', iconBg: '#fdeaea', type: 'Normal',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Shortsword',        icon: 'ti-sword',    stats: { category:'weapon', damage:'1d6', damageType:'Piercing', properties:'Finesse, Light' } },
+            { label: 'Chain Mail',        icon: 'ti-shield',   stats: { category:'armor',  ac: 16, armorType:'Heavy', properties:'Disadvantage on Stealth' } },
+            { label: "Trainer's Pack",    icon: 'ti-backpack' },
+            { label: '5× Poké Ball',      icon: 'ti-circle' },
+            { label: '20 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '75 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Longsword',         icon: 'ti-sword',    stats: { category:'weapon', damage:'1d8', damageType:'Slashing', properties:'Versatile (1d10)' } },
+            { label: 'Leather Armor',     icon: 'ti-shirt',    stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '60 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Iron Monk', icon: 'ti-barbell', accent: '#8B3A3A', iconBg: '#f5ecec', type: 'Fighting',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Handwraps',         icon: 'ti-hand-stop', stats: { category:'weapon', damage:'1d4', damageType:'Bludgeoning', properties:'Unarmed, Light' } },
+            { label: 'Gi (Light Armor)',  icon: 'ti-shirt',     stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Dungeoneer's Pack", icon: 'ti-backpack' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '35 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Bo Staff',          icon: 'ti-tool',   stats: { category:'weapon', damage:'1d6', damageType:'Bludgeoning', properties:'Versatile (1d8), Reach' } },
+            { label: 'Gi (Light Armor)',  icon: 'ti-shirt',  stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '25 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Trail Warden', icon: 'ti-bow-arrow', accent: '#5FBD58', iconBg: '#edf7ec', type: 'Grass',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Shortbow + Quiver', icon: 'ti-bow-arrow', stats: { category:'weapon', damage:'1d6', damageType:'Piercing', properties:'Range 80/320 ft, Two-handed' } },
+            { label: 'Leather Armor',     icon: 'ti-shirt',     stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Ranger's Pack",     icon: 'ti-backpack' },
+            { label: 'Herbalism Kit',     icon: 'ti-plant' },
+            { label: '5× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '70 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Shortsword',        icon: 'ti-sword',  stats: { category:'weapon', damage:'1d6', damageType:'Piercing', properties:'Finesse, Light' } },
+            { label: 'Leather Armor',     icon: 'ti-shirt',  stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '55 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Village Sprout', icon: 'ti-mood-smile', accent: '#9FA19F', iconBg: '#f2f2f2', type: 'Normal',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Slingshot',         icon: 'ti-bow-arrow', stats: { category:'weapon', damage:'1d4', damageType:'Bludgeoning', properties:'Range 30/120 ft' } },
+            { label: 'Casual Clothes',    icon: 'ti-shirt',     stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: 'Small Backpack',    icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+            { label: '5 ₽',              icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '20 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Dagger',            icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Piercing', properties:'Finesse, Light, Thrown 20/60 ft' } },
+            { label: 'Casual Clothes',    icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: 'Small Backpack',    icon: 'ti-backpack' },
+            { label: '1× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '15 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Drumfire Bard', icon: 'ti-heart', accent: '#FF6DA3', iconBg: '#fff0f6', type: 'Fairy',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Rapier',            icon: 'ti-sword',  stats: { category:'weapon', damage:'1d8', damageType:'Piercing', properties:'Finesse' } },
+            { label: 'Fancy Outfit',      icon: 'ti-shirt',  stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Entertainer's Pack",icon: 'ti-backpack' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '50 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Shortbow + Quiver', icon: 'ti-bow-arrow', stats: { category:'weapon', damage:'1d6', damageType:'Piercing', properties:'Range 80/320 ft, Two-handed' } },
+            { label: 'Casual Outfit',     icon: 'ti-shirt',     stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '40 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Thicket Trapper', icon: 'ti-bug', accent: '#8CB230', iconBg: '#f0f7e0', type: 'Bug',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Bug Net',           icon: 'ti-ripple',  stats: { category:'weapon', damage:'1d4', damageType:'Bludgeoning', properties:'Reach, Two-handed' } },
+            { label: 'Padded Armor',      icon: 'ti-shirt',   stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier, Disadvantage on Stealth' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: 'Herbalism Kit',     icon: 'ti-plant' },
+            { label: '4× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '25 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Dagger',            icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Piercing', properties:'Finesse, Light, Thrown 20/60 ft' } },
+            { label: 'Casual Clothes',    icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Naturalist's Pack", icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '18 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Ridge Walker', icon: 'ti-mountain', accent: '#A38C21', iconBg: '#f5f0e0', type: 'Rock',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Warhammer',         icon: 'ti-hammer', stats: { category:'weapon', damage:'1d8', damageType:'Bludgeoning', properties:'Versatile (1d10)' } },
+            { label: 'Scale Mail',        icon: 'ti-shield', stats: { category:'armor',  ac: 14, armorType:'Medium', properties:'+DEX modifier (max 2), Disadvantage on Stealth' } },
+            { label: "Dungeoneer's Pack", icon: 'ti-backpack' },
+            { label: 'Climbing Gear',     icon: 'ti-arrows-up' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '65 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: '2× Handaxe',        icon: 'ti-axe',   stats: { category:'weapon', damage:'1d6', damageType:'Slashing', properties:'Light, Thrown 20/60 ft' } },
+            { label: 'Leather Armor',     icon: 'ti-shirt', stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '50 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Kindler', icon: 'ti-flame', accent: '#FF9741', iconBg: '#fff4e8', type: 'Fire',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Torch ×5',          icon: 'ti-flame' },
+            { label: 'Leather Armor',     icon: 'ti-shirt', stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: 'Tinderbox',         icon: 'ti-flame' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '40 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Handaxe',           icon: 'ti-axe',   stats: { category:'weapon', damage:'1d6', damageType:'Slashing', properties:'Light, Thrown 20/60 ft' } },
+            { label: 'Padded Armor',      icon: 'ti-shirt', stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier, Disadvantage on Stealth' } },
+            { label: "Dungeoneer's Pack", icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+            { label: '5 ₽',              icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '30 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Shallows Sifter', icon: 'ti-ripple', accent: '#2176ae', iconBg: '#daedf7', type: 'Water',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Shortsword',        icon: 'ti-sword',  stats: { category:'weapon', damage:'1d6', damageType:'Piercing', properties:'Finesse, Light' } },
+            { label: 'Swimwear',          icon: 'ti-shirt',  stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Diver's Pack",      icon: 'ti-backpack' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '35 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: '2× Dagger',         icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Piercing', properties:'Finesse, Light, Thrown 20/60 ft' } },
+            { label: 'Swimwear',          icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '25 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Fieldborne', icon: 'ti-tent', accent: '#FF9741', iconBg: '#fff4e8', type: 'Normal',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Handaxe',           icon: 'ti-axe',   stats: { category:'weapon', damage:'1d6', damageType:'Slashing', properties:'Light, Thrown 20/60 ft' } },
+            { label: 'Leather Armor',     icon: 'ti-shirt', stats: { category:'armor',  ac: 11, armorType:'Light', properties:'+DEX modifier' } },
+            { label: "Fieldborne's Pack",     icon: 'ti-backpack' },
+            { label: 'Cooking Supplies',  icon: 'ti-tools-kitchen-2' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '45 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Dagger',            icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Piercing', properties:'Finesse, Light, Thrown 20/60 ft' } },
+            { label: 'Casual Clothes',    icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: 'Tinker\'s Tools',   icon: 'ti-settings' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '35 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Seer', icon: 'ti-sparkles', accent: '#FF6DA3', iconBg: '#fff0f6', type: 'Seer',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Arcane Focus',      icon: 'ti-wand' },
+            { label: 'Mystic Robes',      icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Scholar's Pack",    icon: 'ti-backpack' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+            { label: '10 ₽',             icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '50 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Quarterstaff',      icon: 'ti-tool',  stats: { category:'weapon', damage:'1d6', damageType:'Bludgeoning', properties:'Versatile (1d8)' } },
+            { label: 'Casual Robe',       icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: 'Spellbook',         icon: 'ti-book' },
+            { label: '2× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '40 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Pokémon Tender', icon: 'ti-leaf', accent: '#2e8b57', iconBg: '#e8f5ee', type: 'Grass',
+    options: [
+      {
+        label: 'Option A',
+        packages: [
+          { items: [
+            { label: 'Walking Stick',     icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Bludgeoning', properties:'Light' } },
+            { label: 'Work Clothes',      icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Breeder's Pack",    icon: 'ti-backpack' },
+            { label: 'Herbalism Kit',     icon: 'ti-plant' },
+            { label: '5× Poké Ball',      icon: 'ti-circle' },
+          ]},
+          { items: [
+            { label: '45 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+      {
+        label: 'Option B',
+        packages: [
+          { items: [
+            { label: 'Dagger',            icon: 'ti-tool',  stats: { category:'weapon', damage:'1d4', damageType:'Piercing', properties:'Finesse, Light, Thrown 20/60 ft' } },
+            { label: 'Work Clothes',      icon: 'ti-shirt', stats: { category:'armor',  ac: 10, armorType:'None', properties:'No armor bonus' } },
+            { label: "Explorer's Pack",   icon: 'ti-backpack' },
+            { label: 'Healing Supplies',  icon: 'ti-heart' },
+            { label: '3× Poké Ball',      icon: 'ti-circle' },
+            { label: '5 ₽',              icon: 'ti-coin', gold: true },
+          ]},
+          { items: [
+            { label: '35 ₽',             icon: 'ti-coins', gold: true },
+          ]},
+        ]
+      },
+    ]
+  },
+];
+
+// track selections per class: { className: { optIdx, pkgIdx } }
+const selections = {};
+
+function buildPills(pkg) {
+  return pkg.items.map(function(item) {
+    return '<span class="item-pill' + (item.gold ? ' gold' : '') + '">' +
+      '<i class="ti ' + item.icon + '" aria-hidden="true"></i>' +
+      item.label +
+    '</span>';
+  }).join('');
+}
+
+function buildOptionGroup(cls, optIdx, opt) {
+  // Each package inside the option becomes its own selectable box
+  const pkgsHtml = opt.packages.map(function(pkg, pi) {
+    const id = 'pkg-' + cls.name.toLowerCase().replace(/\s/g,'') + '-' + optIdx + '-' + pi;
+    return '<div class="pkg-box selectable" id="' + id + '"' +
+      ' data-class="' + cls.name + '"' +
+      ' data-opt="' + optIdx + '"' +
+      ' data-pkg="' + pi + '"' +
+      ' role="radio" tabindex="0" aria-checked="false">' +
+      '<div class="pkg-check"><i class="ti ti-check" aria-hidden="true"></i></div>' +
+      '<div class="item-list">' + buildPills(pkg) + '</div>' +
+    '</div>';
+  }).join('<div class="or-sep-inner">— OR —</div>');
+
+  return '<div class="option-group">' +
+    '<div class="option-group-label">' + opt.label + '</div>' +
+    pkgsHtml +
+  '</div>';
+}
+
+const container = document.getElementById('class-list');
+
+// Read the class chosen on the class-select page
+var selectedClass = '';
+try { selectedClass = localStorage.getItem('pd_selected_class') || ''; } catch(e) {}
+
+// Filter to just the player's class; fall back to showing all if nothing saved
+const visibleClasses = selectedClass
+  ? classData.filter(function(c) { return c.name === selectedClass; })
+  : classData;
+
+// If no class was found, show a friendly notice
+if (visibleClasses.length === 0) {
+  const notice = document.createElement('p');
+  notice.style.cssText = 'text-align:center;font-style:italic;color:var(--gray);margin-top:2rem;';
+  notice.textContent = 'No class selected — go back and choose your class first.';
+  container.appendChild(notice);
+}
+
+visibleClasses.forEach(function(cls, ci) {
+  const blockId   = 'block-' + ci;
+  const triggerId = 'trigger-' + ci;
+  const panelId   = 'panel-' + ci;
+
+  const badgeClass = cls.darkBadge ? 'trigger-badge dark-text' : 'trigger-badge';
+  const badgeBg    = cls.darkBadge ? '#F4D23C' : cls.accent;
+
+  const groupsHtml = cls.options.map(function(opt, oi) {
+    return buildOptionGroup(cls, oi, opt);
+  }).join('<div class="or-sep" style="text-align:center;padding:6px 0;font-family:\'Press Start 2P\',monospace;font-size:8px;color:var(--gray-lt)">— OR —</div>');
+
+  const block = document.createElement('div');
+  block.className = 'class-block';
+  block.id = blockId;
+  block.innerHTML =
+    '<div class="class-trigger open" id="' + triggerId + '" style="--accent:' + cls.accent + '" role="button" tabindex="0" aria-expanded="true" aria-controls="' + panelId + '">' +
+      '<div class="trigger-icon" style="background:' + cls.iconBg + ';color:' + cls.accent + '"><i class="ti ' + cls.icon + '" aria-hidden="true"></i></div>' +
+      '<div class="trigger-info">' +
+        '<p class="trigger-name">' + cls.name.toUpperCase() + '</p>' +
+        '<p class="trigger-sub" id="sub-' + ci + '">Choose a starting loadout</p>' +
+      '</div>' +
+      '<span class="' + badgeClass + '" style="background:' + badgeBg + '">' + cls.type + '</span>' +
+      '<i class="ti ti-chevron-right trigger-chevron" aria-hidden="true"></i>' +
+    '</div>' +
+    '<div class="equip-panel open" id="' + panelId + '">' +
+      '<div class="equip-inner">' + groupsHtml + '</div>' +
+    '</div>';
+
+  container.appendChild(block);
+
+  // Toggle open/closed
+  const trigger = document.getElementById(triggerId);
+  const panel   = document.getElementById(panelId);
+  function toggleBlock() {
+    const open = trigger.classList.contains('open');
+    trigger.classList.toggle('open', !open);
+    panel.classList.toggle('open', !open);
+    trigger.setAttribute('aria-expanded', String(!open));
+  }
+  trigger.addEventListener('click', toggleBlock);
+  trigger.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBlock(); } });
+});
+
+// ── pkg-box selection ──
+document.getElementById('class-list').addEventListener('click', function(e) {
+  const box = e.target.closest('.pkg-box.selectable');
+  if (!box) return;
+  selectBox(box);
+});
+
+document.getElementById('class-list').addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const box = e.target.closest('.pkg-box.selectable');
+  if (!box) return;
+  e.preventDefault();
+  selectBox(box);
+});
+
+function selectBox(box) {
+  const cls    = box.getAttribute('data-class');
+  const optIdx = parseInt(box.getAttribute('data-opt'));
+  const pkgIdx = parseInt(box.getAttribute('data-pkg'));
+
+  // Deselect all pkg-boxes in this class block
+  const block = box.closest('.class-block');
+  block.querySelectorAll('.pkg-box.selectable').forEach(function(b) {
+    b.classList.remove('selected');
+    b.setAttribute('aria-checked', 'false');
+  });
+
+  box.classList.add('selected');
+  box.setAttribute('aria-checked', 'true');
+  selections[cls] = { optIdx: optIdx, pkgIdx: pkgIdx };
+
+  // Update trigger subtitle
+  const sub = block.querySelector('.trigger-sub');
+  if (sub) {
+    var clsDef = visibleClasses.find(function(c) { return c.name === cls; });
+    sub.textContent = clsDef.options[optIdx].label + ' · Package ' + (pkgIdx + 1) + ' selected ✓';
+  }
+}
+
+// ── Save & view character ──
+document.getElementById('save-btn').addEventListener('click', function() {
+  const inventory = [];
+  const inventoryFull = []; // includes stats
+  visibleClasses.forEach(function(cls) {
+    var sel = selections[cls.name];
+    if (sel !== undefined) {
+      var pkg = cls.options[sel.optIdx].packages[sel.pkgIdx];
+      pkg.items.forEach(function(item) {
+        inventory.push(item.label);
+        inventoryFull.push({ label: item.label, stats: item.stats || null });
+      });
+    }
+  });
+
+  if (inventory.length === 0) {
+    alert('Please choose an equipment option before saving!');
+    return;
+  }
+
+  const character = {
+    class: selectedClass,
+    equipment: selections,
+    inventory: inventory,
+    inventoryFull: inventoryFull,
+    savedAt: new Date().toISOString(),
+  };
+  try { localStorage.setItem('pd_character_equipment', JSON.stringify(character)); } catch(e) {}
+
+  window.location.href = 'dnd_pokemon_character_sheet.html';
+});
+
+
+
+
+    
+
+
+    // ── Generate snow flakes ──
+    (function() {
+      var layer = document.getElementById('snow-bg') || document.getElementById('snow-layer');
+      if (!layer || layer.children.length > 0) return;
+      var cls = layer.id === 'snow-bg' ? 'sf' : 'flake';
+      for (var i = 0; i < 35; i++) {
+        var f = document.createElement('div');
+        f.className = cls;
+        var sz = 1.5 + Math.random() * 3;
+        f.style.left = Math.random() * 100 + 'vw';
+        f.style.width  = sz + 'px';
+        f.style.height = sz + 'px';
+        f.style.animationDuration = (10 + Math.random() * 20) + 's';
+        f.style.animationDelay    = -(Math.random() * 25) + 's';
+        layer.appendChild(f);
+      }
+    })();
+
+    // ── Snow toggle ──
+    (function() {
+      var layer = document.getElementById('snow-bg') || document.getElementById('snow-layer');
+      var btn   = document.getElementById('snow-toggle');
+      var lbl   = document.getElementById('snow-toggle-label') || document.getElementById('snow-label');
+      var on    = true;
+      try { on = localStorage.getItem('pd_snow') !== 'off'; } catch(e) {}
+      function apply(val) {
+        on = val;
+        if (layer) layer.style.display = val ? '' : 'none';
+        if (lbl)   lbl.textContent = val ? 'SNOW ON' : 'SNOW OFF';
+        if (btn)   btn.classList.toggle('snow-off', !val);
+        try { localStorage.setItem('pd_snow', val ? 'on' : 'off'); } catch(e) {}
+      }
+      apply(on);
+      if (btn) btn.addEventListener('click', function() { apply(!on); });
+    })();
+
+    // ── Rotating taglines ──
+    (function() {
+      var taglines = [
+        "The cold never sleeps.",
+        "Even Magikarp fear what stirs beneath the ice.",
+        "Something ancient has been woken. It is not happy.",
+        "Roll for Sanity. Fail for flavor.",
+        "Your starter is scared. You should be too.",
+        "Not all blizzards are natural.",
+        "The cult thought they were in control. They were wrong.",
+        "It's a Pokemon world. The horror is optional.",
+        "Somewhere in the snow, something remembers your name.",
+        "Pack a Burn Heal. You won't need it.",
+        "The storm doesn't end. It spreads.",
+        "The Pokedex has no entry for what's coming.",
+        "Gotta roll 'em all!",
+        "The journey of a thousand miles begins with a single Poke Ball.",
+        "Every trainer was a Village Sprout once. Some still are.",
+        "Your Pokemon believe in you. That has to count for something.",
+        "Adventure is out there - and it brought snacks!"
+      ];
+      var el = document.getElementById('footer-tagline');
+      if (el) el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
+    })();
+
+</script>
+</body>
+</html>
