@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Battle Map — The Frostbound Harrow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--frost:#a8d8ea;--fd:#5b9bb5;--ice:#d6eef8;--ghost:#7bafc8;--void:#0d1e2b;--red:#E3350D}
+    html,body{height:100%;overflow:hidden}
+    body{background:linear-gradient(175deg,#0d1e2b,#0f2235,#091825);color:var(--ice);font-family:'Nunito',sans-serif}
+    .ts{position:fixed;top:0;left:0;right:0;height:10px;z-index:300;background:linear-gradient(90deg,#1a5f7a,#3a9abf,#1a5f7a)}
+    .ts::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;background:rgba(168,216,234,.35)}
+    #sb{display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:400;padding:5px 14px;border-radius:8px;font-family:'Press Start 2P',monospace;font-size:7px;white-space:nowrap}
+    #sb.off{display:block;background:rgba(255,151,65,.15);border:1px solid rgba(255,151,65,.5);color:#FF9741}
+    #sb.on{display:block;background:rgba(95,189,88,.15);border:1px solid rgba(95,189,88,.5);color:#5FBD58}
+    /* LOBBY */
+    #lobby{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:linear-gradient(175deg,#0d1e2b,#091825)}
+    .lc{background:rgba(255,255,255,.05);border:1.5px solid rgba(168,216,234,.25);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.6);padding:2rem 2.25rem;width:min(440px,94vw);display:flex;flex-direction:column;gap:1rem;position:relative;overflow:hidden}
+    .lc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#5b9bb5,#a8d8ea,#5b9bb5,transparent)}
+    .lt{font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.5vw,14px);color:var(--frost);text-shadow:0 0 14px rgba(168,216,234,.7);text-align:center;line-height:1.6}
+    .lsub{font-size:12px;color:var(--ghost);text-align:center;font-style:italic}
+    .ldiv{height:1px;background:rgba(168,216,234,.15)}
+    .lf{display:flex;flex-direction:column;gap:5px}
+    .lf label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--ghost)}
+    .li{padding:8px 12px;background:rgba(255,255,255,.06);border:1.5px solid rgba(168,216,234,.2);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;color:var(--ice)}
+    .li:focus{outline:none;border-color:var(--frost)}
+    .li::placeholder{color:rgba(168,216,234,.25)}
+    .lcb{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ghost)}
+    .lcb input{accent-color:var(--fd);width:16px;height:16px}
+    .lb{background:rgba(58,154,191,.25);color:var(--ice);border:1.5px solid rgba(168,216,234,.4);border-radius:10px;padding:10px;width:100%;font-family:'Press Start 2P',monospace;font-size:9px;cursor:pointer}
+    .lb:hover{background:var(--fd)}
+    .le{font-size:11px;color:#f08080;text-align:center;font-family:'Press Start 2P',monospace;min-height:14px}
+    .lh{font-size:11px;color:rgba(168,216,234,.35);text-align:center;font-style:italic;line-height:1.6}
+    .lh strong{color:rgba(168,216,234,.6);font-style:normal}
+    /* MAP */
+    #map-ui{display:none;flex-direction:column;height:100vh;padding-top:10px}
+    .topbar{height:44px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;background:rgba(13,30,43,.95);border-bottom:1px solid rgba(168,216,234,.15);z-index:10;overflow-x:auto}
+    .mt{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--frost);white-space:nowrap;margin-right:4px}
+    .tb{background:rgba(255,255,255,.05);border:1.5px solid rgba(168,216,234,.2);border-radius:7px;padding:5px 10px;font-family:'Press Start 2P',monospace;font-size:7px;color:var(--ghost);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+    .tb i{font-size:15px}
+    .tb:hover{background:rgba(168,216,234,.1);color:var(--ice)}
+    .tb.active{background:var(--fd);color:var(--ice);border-color:var(--frost)}
+    .tb.danger:hover{background:rgba(214,40,40,.2);color:#f08080}
+    .sep{width:1px;height:24px;background:rgba(168,216,234,.15);flex-shrink:0}
+    #fsub{display:none;align-items:center;gap:6px}
+    .ob{margin-left:auto;font-size:11px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+    .mb{flex:1;display:flex;overflow:hidden}
+    .cw{flex:1;position:relative;overflow:hidden;background:#091520;cursor:grab}
+    #mc{width:100%;height:100%;display:block}
+    .sb2{width:220px;flex-shrink:0;background:rgba(13,30,43,.95);border-left:1px solid rgba(168,216,234,.12);display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--fd) transparent}
+    .ss{padding:.85rem 1rem;border-bottom:1px solid rgba(168,216,234,.1);display:flex;flex-direction:column;gap:6px}
+    .sst{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--ghost);display:flex;align-items:center;gap:6px}
+    .sst i{font-size:13px}
+    .si{padding:5px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(168,216,234,.2);border-radius:6px;font-size:12px;color:var(--ice);font-family:'Nunito',sans-serif;width:100%}
+    .si::placeholder{color:rgba(168,216,234,.3)}
+    .si:focus{outline:none;border-color:var(--frost)}
+    .sr{display:flex;gap:6px;align-items:center}
+    .sr label{font-size:10px;color:var(--ghost);white-space:nowrap}
+    .sr input[type=color]{width:28px;height:28px;border-radius:6px;border:1px solid rgba(168,216,234,.2);padding:2px;background:rgba(255,255,255,.06);cursor:pointer}
+    .sr select{flex:1;padding:4px 6px;background:rgba(255,255,255,.06);border:1px solid rgba(168,216,234,.2);border-radius:6px;font-size:11px;color:var(--ice);font-family:'Nunito',sans-serif}
+    .sr select option{background:#0d1e2b}
+    .sbn{background:rgba(58,154,191,.2);color:var(--ice);border:1px solid rgba(168,216,234,.3);border-radius:6px;padding:6px;font-family:'Press Start 2P',monospace;font-size:7px;cursor:pointer;width:100%}
+    .sbn:hover{background:var(--fd)}
+    .fbr{display:flex;gap:6px}
+    .fb{flex:1;padding:6px 4px;background:rgba(255,255,255,.05);border:1px solid rgba(168,216,234,.2);border-radius:6px;font-family:'Press Start 2P',monospace;font-size:6px;color:var(--ghost);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+    .fb:hover{background:rgba(168,216,234,.1);color:var(--ice)}
+    .fb.danger:hover{background:rgba(214,40,40,.15);color:#f08080}
+    #tlist{display:flex;flex-direction:column;gap:4px}
+    .tr2{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:6px;background:rgba(255,255,255,.04);font-size:12px;color:var(--ice)}
+    .td2{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .tn2{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tdl{background:none;border:none;color:rgba(168,216,234,.3);cursor:pointer;font-size:13px;padding:0;line-height:1}
+    .tdl:hover{color:var(--red)}
+    .ht{font-size:11px;color:rgba(168,216,234,.4);font-style:italic;line-height:1.6}
+    #dfs,#dis{display:none}
+    .bb{height:28px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;background:rgba(13,30,43,.9);border-top:1px solid rgba(168,216,234,.1);font-size:10px;color:rgba(168,216,234,.4);font-family:'Press Start 2P',monospace}
+  </style>
+</head>
+<body>
+<div class="ts"></div>
+<div id="sb"></div>
+<input type="file" id="bfi" accept="image/*" style="display:none"/>
+
+<div id="lobby">
+  <div class="lc">
+    <p class="lt">Battle Map</p>
+    <p class="lsub">The Frostbound Harrow</p>
+    <div class="ldiv"></div>
+    <div class="lf"><label>TRAINER NAME</label><input class="li" id="ln" type="text" placeholder="Your name…" maxlength="20"/></div>
+    <div class="lf"><label>SESSION CODE</label><input class="li" id="lc2" type="text" placeholder="e.g. HARROW01" maxlength="16" style="text-transform:uppercase"/></div>
+    <div class="lcb"><input type="checkbox" id="ldm"/><label for="ldm">I am the Dungeon Master</label></div>
+    <div class="lf" id="lpw" style="display:none"><label>DM PASSWORD</label><input class="li" id="lp" type="password" placeholder="DM password…"/></div>
+    <p class="le" id="le"></p>
+    <button class="lb" onclick="joinSession()">ENTER SESSION ›</button>
+    <p class="lh">All players use the <strong>same session code</strong>.<br/>DM password: <strong>HARROW</strong></p>
+  </div>
+</div>
+
+<div id="map-ui">
+  <div class="topbar">
+    <span class="mt">BATTLE MAP</span>
+    <div class="sep"></div>
+    <button class="tb active" id="t-sel"   onclick="setTool('select')"><i class="ti ti-pointer"></i>PAN</button>
+    <button class="tb"        id="t-ping"  onclick="setTool('ping')"><i class="ti ti-map-pin"></i>PING</button>
+    <button class="tb"        id="t-fog"   onclick="setTool('fog')"><i class="ti ti-cloud"></i>FOG</button>
+    <button class="tb"        id="t-erase" onclick="setTool('erase')"><i class="ti ti-eraser"></i>REVEAL</button>
+    <div id="fsub">
+      <div class="sep"></div>
+      <button class="tb active" id="fm-h" onclick="setFogMode('hide')"><i class="ti ti-eye-off"></i>HIDE</button>
+      <button class="tb"        id="fm-r" onclick="setFogMode('reveal')"><i class="ti ti-eye"></i>REVEAL</button>
+      <button class="tb danger" onclick="fillAllFog()"><i class="ti ti-cloud-filled"></i>ALL</button>
+      <button class="tb danger" onclick="clearAllFog()"><i class="ti ti-sun"></i>CLEAR</button>
+    </div>
+    <div class="sep"></div>
+    <button class="tb active" id="t-grid" onclick="toggleGrid()"><i class="ti ti-grid-dots"></i>GRID</button>
+    <button class="tb" onclick="resetView()"><i class="ti ti-home"></i>RESET</button>
+    <div class="ob">
+      <span style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--ghost)">ONLINE:</span>
+      <span id="ol"></span>
+    </div>
+  </div>
+  <div class="mb">
+    <div class="cw" id="cw"><canvas id="mc"></canvas></div>
+    <aside class="sb2">
+      <div class="ss">
+        <p class="sst"><i class="ti ti-circle-filled"></i>ADD TOKEN</p>
+        <input class="si" type="text" id="tn" placeholder="Token name…" maxlength="16"/>
+        <div class="sr">
+          <label>Color</label><input type="color" id="tc" value="#a8d8ea"/>
+          <label>Size</label>
+          <select id="tsz"><option value="1">1×1</option><option value="2">2×2</option><option value="3">3×3</option></select>
+        </div>
+        <button class="sbn" onclick="addToken()"><i class="ti ti-plus"></i> PLACE TOKEN</button>
+      </div>
+      <div class="ss">
+        <p class="sst"><i class="ti ti-list"></i>ON THE FIELD</p>
+        <div id="tlist"></div>
+      </div>
+      <div class="ss" id="dfs">
+        <p class="sst"><i class="ti ti-eye-off"></i>FOG OF WAR</p>
+        <div class="fbr">
+          <button class="fb" onclick="fillAllFog()">COVER ALL</button>
+          <button class="fb danger" onclick="clearAllFog()">CLEAR ALL</button>
+        </div>
+        <p class="ht">Use FOG/REVEAL tools to paint cells.</p>
+      </div>
+      <div class="ss" id="dis">
+        <p class="sst"><i class="ti ti-photo"></i>MAP IMAGE</p>
+        <p class="ht">Upload a background. All players see it.</p>
+        <div class="fbr">
+          <button class="fb" onclick="uploadBg()"><i class="ti ti-upload"></i> UPLOAD</button>
+          <button class="fb danger" onclick="clearBg()"><i class="ti ti-trash"></i> CLEAR</button>
+        </div>
+      </div>
+      <div class="ss">
+        <p class="sst"><i class="ti ti-info-circle"></i>CONTROLS</p>
+        <p class="ht"><strong style="color:var(--ice)">Scroll</strong> zoom · <strong style="color:var(--ice)">PAN drag</strong> move · <strong style="color:var(--ice)">Token drag</strong> move token · <strong style="color:var(--ice)">PING click</strong> signal · <strong style="color:var(--ice)">FOG drag</strong> hide (DM) · <strong style="color:var(--ice)">REVEAL drag</strong> show (DM)</p>
+      </div>
+    </aside>
+  </div>
+  <div class="bb"><span id="bs">SESSION: —</span><span id="br">—</span></div>
+</div>
+
+<script>
+// ── Firebase REST ──
+var DB = 'https://frostbound-harrow-default-rtdb.firebaseio.com';
+function fbGET(p){ return fetch(DB+'/'+p+'.json').then(function(r){return r.json();}).catch(function(){return null;}); }
+function fbPUT(p,v){ return fetch(DB+'/'+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}).catch(function(){}); }
+function fbPATCH(p,v){ return fetch(DB+'/'+p+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}).catch(function(){}); }
+function fbDEL(p){ return fetch(DB+'/'+p+'.json',{method:'DELETE'}).catch(function(){}); }
+function fbPOST(p,v){ return fetch(DB+'/'+p+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(v)}).then(function(r){return r.json();}).catch(function(){return null;}); }
+
+// ── State ──
+var SID='', isDM=false, myName='', myColor='#a8d8ea', myId='u'+Math.random().toString(36).slice(2,9);
+var GW=40, GH=30, CS=40;
+var pan={x:40,y:40}, sc=1, drag=false, ds=null, ps=null;
+var tool='select', fogMode='hide', showGrid=true;
+var tokens={}, fog={}, pings={}, bgImg=null, lastBgUrl=null, dragTok=null;
+var cv, ctx, fbOK=false;
+
+// ── Lobby ──
+document.getElementById('ldm').addEventListener('change',function(){document.getElementById('lpw').style.display=this.checked?'flex':'none';});
+document.getElementById('lc2').addEventListener('input',function(){this.value=this.value.toUpperCase();});
+['ln','lc2','lp'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')joinSession();});});
+
+function joinSession(){
+  var name=document.getElementById('ln').value.trim();
+  var code=document.getElementById('lc2').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  var dm=document.getElementById('ldm').checked;
+  var pass=document.getElementById('lp').value.trim();
+  var err=document.getElementById('le');
+  if(!name){err.textContent='Enter your trainer name.';return;}
+  if(!code){err.textContent='Enter a session code.';return;}
+  if(dm&&pass!=='HARROW'){err.textContent='Incorrect DM password.';return;}
+  err.textContent='';
+  myName=name; SID=code; isDM=dm;
+  var cols=['#a8d8ea','#ff9741','#5FBD58','#FF6DA3','#F4D23C','#9b6ddb','#74CEC0','#D62828'];
+  myColor=cols[Math.floor(Math.random()*cols.length)];
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('map-ui').style.display='flex';
+  if(isDM){document.getElementById('dfs').style.display='flex';document.getElementById('dis').style.display='flex';}
+  initCanvas();
+  updateTB();
+  // Test Firebase
+  fetch(DB+'/.json?shallow=true')
+    .then(function(){
+      fbOK=true;
+      showStatus('● LIVE — Firebase connected','on');
+      fbPUT('sessions/'+SID+'/users/'+myId,{name:myName,color:myColor,dm:isDM});
+      startPoll();
+    })
+    .catch(function(){
+      fbOK=false;
+      showStatus('⚠ OFFLINE — changes will not sync','off');
+    });
+  document.getElementById('bs').textContent='SESSION: '+SID;
+  document.getElementById('br').textContent=isDM?'DM MODE':'PLAYER: '+myName;
+}
+
+function showStatus(msg,cls){
+  var el=document.getElementById('sb');
+  el.textContent=msg; el.className=cls;
+  if(cls==='on') setTimeout(function(){el.className='';el.style.display='none';},3000);
+}
+
+// ── Polling ──
+function startPoll(){ poll(); setInterval(poll,1000); }
+
+function poll(){
+  if(!fbOK||!SID) return;
+  var base='sessions/'+SID;
+  Promise.all([
+    fbGET(base+'/tokens'),
+    fbGET(base+'/fog'),
+    fbGET(base+'/pings'),
+    fbGET(base+'/bgImage'),
+    fbGET(base+'/users')
+  ]).then(function(R){
+    // Tokens — only update when not dragging
+    if(!dragTok){
+      var nt=R[0]||{};
+      tokens=nt;
+      refreshList();
+    }
+    // Fog — always accept from Firebase (source of truth)
+    var nf=R[1]||{};
+    fog=nf;
+    // Pings
+    var np=R[2]||{};
+    var now=Date.now();
+    // Remove expired pings from Firebase
+    Object.keys(np).forEach(function(id){if(now-np[id].ts>3500){fbDEL(base+'/pings/'+id);delete np[id];}});
+    pings=np;
+    // BG Image
+    var nb=R[3]||null;
+    if(nb&&nb!==lastBgUrl){lastBgUrl=nb;var i=new Image();i.onload=function(){bgImg=i;redraw();};i.src=nb;}
+    else if(!nb&&lastBgUrl){lastBgUrl=null;bgImg=null;}
+    // Users
+    var nu=R[4]||{};
+    document.getElementById('ol').innerHTML=Object.values(nu).map(function(u){return '<span style="color:'+u.color+'">●'+u.name+(u.dm?' (DM)':'')+'</span>';}).join(' ');
+    redraw();
+  }).catch(function(){});
+}
+
+// ── Canvas ──
+function initCanvas(){
+  cv=document.getElementById('mc'); ctx=cv.getContext('2d');
+  resize(); window.addEventListener('resize',resize);
+  cv.addEventListener('mousedown',onD); cv.addEventListener('mousemove',onM); cv.addEventListener('mouseup',onU); cv.addEventListener('mouseleave',onU);
+  cv.addEventListener('wheel',onW,{passive:false});
+  cv.addEventListener('touchstart',function(e){e.preventDefault();onD(e);},{passive:false});
+  cv.addEventListener('touchmove', function(e){e.preventDefault();onM(e);},{passive:false});
+  cv.addEventListener('touchend',  function(e){e.preventDefault();onU(e);},{passive:false});
+}
+function resize(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;redraw();}
+function w2s(wx,wy){return{x:wx*CS*sc+pan.x,y:wy*CS*sc+pan.y};}
+function s2w(sx,sy){return{x:(sx-pan.x)/(CS*sc),y:(sy-pan.y)/(CS*sc)};}
+function gcell(sx,sy){var w=s2w(sx,sy);return{col:Math.floor(w.x),row:Math.floor(w.y)};}
+function gpos(e){var r=cv.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:s.clientX-r.left,y:s.clientY-r.top};}
+
+// ── Draw ──
+function redraw(){
+  if(!ctx)return;
+  var cs=CS*sc;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(bgImg){ctx.globalAlpha=showGrid?0.6:1.0;ctx.drawImage(bgImg,pan.x,pan.y,GW*cs,GH*cs);ctx.globalAlpha=1.0;}
+  else{ctx.fillStyle='#091520';ctx.fillRect(pan.x,pan.y,GW*cs,GH*cs);}
+  if(showGrid){
+    ctx.strokeStyle='rgba(0,0,0,0.6)';ctx.lineWidth=0.8;
+    for(var c=0;c<=GW;c++){var x=c*cs+pan.x;ctx.beginPath();ctx.moveTo(x,pan.y);ctx.lineTo(x,GH*cs+pan.y);ctx.stroke();}
+    for(var r=0;r<=GH;r++){var y=r*cs+pan.y;ctx.beginPath();ctx.moveTo(pan.x,y);ctx.lineTo(GW*cs+pan.x,y);ctx.stroke();}
+  }
+  Object.values(tokens).forEach(drawTok);
+  Object.keys(fog).forEach(function(k){var p=k.split('_'),s=w2s(+p[0],+p[1]);ctx.fillStyle='rgba(10,21,32,0.92)';ctx.fillRect(s.x,s.y,cs,cs);});
+  var now=Date.now();
+  Object.values(pings).forEach(function(p){var age=now-p.ts,al=Math.max(0,1-age/3000),s=w2s(p.x,p.y),rd=(18+age/80)*sc;ctx.beginPath();ctx.arc(s.x,s.y,rd,0,Math.PI*2);ctx.strokeStyle='rgba(168,216,234,'+al+')';ctx.lineWidth=2.5*sc;ctx.stroke();ctx.fillStyle='rgba(168,216,234,'+(al*.25)+')';ctx.fill();});
+  if(isDM&&sc>0.6){ctx.fillStyle='rgba(168,216,234,0.3)';ctx.font=Math.max(8,9*sc)+'px monospace';for(var cc=0;cc<GW;cc+=5)for(var rr=0;rr<GH;rr+=5){var s=w2s(cc+.1,rr+.15);ctx.fillText(cc+','+rr,s.x,s.y+10*sc);}}
+}
+function drawTok(t){
+  if(!t)return;
+  var s=w2s(t.x,t.y),cs=CS*sc,sz=(t.size||1)*cs,r=sz/2,cx=s.x+r,cy=s.y+r;
+  ctx.beginPath();ctx.arc(cx,cy+2,r-2,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.4)';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,r-2,0,Math.PI*2);ctx.fillStyle=t.color||'#a8d8ea';ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold '+Math.max(10,r*.8)+'px Nunito,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText((t.name||'?')[0].toUpperCase(),cx,cy);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  if(sc>.5){ctx.fillStyle='rgba(214,238,248,.9)';ctx.font=Math.max(8,10*sc)+'px Nunito,sans-serif';ctx.textAlign='center';ctx.fillText(t.name||'',cx,s.y+sz+12*sc);ctx.textAlign='left';}
+}
+
+// ── Events ──
+function onD(e){
+  var p=gpos(e);drag=true;ds={x:p.x,y:p.y};ps={x:pan.x,y:pan.y};
+  if(tool==='ping'){doPing(p);return;}
+  if(tool==='fog'&&isDM){doFog(p);return;}
+  if(tool==='erase'&&isDM){doErase(p);return;}
+  if(tool==='select'){var h=tokAt(p.x,p.y);if(h)dragTok={id:h.id,ox:h.x,oy:h.y,lx:h.x,ly:h.y};}
+}
+function onM(e){
+  if(!drag)return;
+  var p=gpos(e);
+  if(tool==='fog'&&isDM){doFog(p);return;}
+  if(tool==='erase'&&isDM){doErase(p);return;}
+  if(tool==='select'&&dragTok){
+    var nx=Math.max(0,Math.min(GW-1,Math.round(dragTok.ox+(p.x-ds.x)/(CS*sc))));
+    var ny=Math.max(0,Math.min(GH-1,Math.round(dragTok.oy+(p.y-ds.y)/(CS*sc))));
+    if(tokens[dragTok.id]){tokens[dragTok.id].x=nx;tokens[dragTok.id].y=ny;}
+    if(fbOK&&(nx!==dragTok.lx||ny!==dragTok.ly)){
+      dragTok.lx=nx;dragTok.ly=ny;
+      fbPATCH('sessions/'+SID+'/tokens/'+dragTok.id,{x:nx,y:ny});
+    }
+    redraw();return;
+  }
+  if(tool==='select'&&!dragTok){pan.x=ps.x+(p.x-ds.x);pan.y=ps.y+(p.y-ds.y);redraw();}
+}
+function onU(){drag=false;dragTok=null;}
+function onW(e){
+  e.preventDefault();var p=gpos(e),f=e.deltaY<0?1.1:.9,ns=Math.min(3,Math.max(.2,sc*f));
+  pan.x=p.x-(p.x-pan.x)*(ns/sc);pan.y=p.y-(p.y-pan.y)*(ns/sc);sc=ns;redraw();
+}
+function tokAt(sx,sy){
+  var cs=CS*sc,found=null;
+  Object.keys(tokens).forEach(function(id){var t=tokens[id],s=w2s(t.x,t.y),sz=(t.size||1)*cs,dx=sx-(s.x+sz/2),dy=sy-(s.y+sz/2);if(Math.sqrt(dx*dx+dy*dy)<sz/2)found=Object.assign({id:id},t);});
+  return found;
+}
+
+// ── Tool actions ──
+function doFog(p){
+  var c=gcell(p.x,p.y);if(c.col<0||c.col>=GW||c.row<0||c.row>=GH)return;
+  var k=c.col+'_'+c.row;
+  if(fogMode==='hide'){
+    fog[k]=true;
+    if(fbOK){var u={};u[k]=true;fbPATCH('sessions/'+SID+'/fog',u);}
+  } else {
+    delete fog[k];
+    if(fbOK) fbDEL('sessions/'+SID+'/fog/'+k);
+  }
+  redraw();
+}
+function doErase(p){
+  var c=gcell(p.x,p.y);if(c.col<0||c.col>=GW||c.row<0||c.row>=GH)return;
+  var k=c.col+'_'+c.row;delete fog[k];if(fbOK)fbDEL('sessions/'+SID+'/fog/'+k);redraw();
+}
+function doPing(p){
+  var w=s2w(p.x,p.y),pk={x:w.x,y:w.y,color:myColor,name:myName,ts:Date.now()};
+  var lid='p'+Date.now();pings[lid]=pk;redraw();
+  setTimeout(function(){delete pings[lid];redraw();},3500);
+  if(fbOK)fbPOST('sessions/'+SID+'/pings',pk);
+}
+
+// ── Public ──
+function setTool(t){
+  tool=t;
+  document.getElementById('cw').style.cursor=(t==='ping'||t==='fog'||t==='erase')?'crosshair':'grab';
+  document.getElementById('fsub').style.display=(t==='fog'&&isDM)?'flex':'none';
+  updateTB();
+}
+function setFogMode(m){fogMode=m;updateTB();}
+function fillAllFog(){
+  if(!isDM)return;var u={};
+  for(var c=0;c<GW;c++)for(var r=0;r<GH;r++)u[c+'_'+r]=true;
+  fog=u;redraw();if(fbOK)fbPUT('sessions/'+SID+'/fog',u);
+}
+function clearAllFog(){if(!isDM)return;fog={};redraw();if(fbOK)fbDEL('sessions/'+SID+'/fog');}
+function addToken(){
+  var name=document.getElementById('tn').value.trim()||'Token';
+  var color=document.getElementById('tc').value;
+  var size=parseFloat(document.getElementById('tsz').value)||1;
+  var tok={name:name,color:color,size:size,x:1,y:1};
+  if(fbOK){
+    fbPOST('sessions/'+SID+'/tokens',tok).then(function(res){
+      // Firebase returns {name:"<key>"} — add to local state with real key
+      if(res&&res.name){tokens[res.name]=tok;}
+      refreshList();redraw();
+    });
+  } else {
+    var lid='t'+Date.now();tokens[lid]=tok;refreshList();redraw();
+  }
+  document.getElementById('tn').value='';
+}
+function removeToken(id){
+  delete tokens[id];refreshList();redraw();if(fbOK)fbDEL('sessions/'+SID+'/tokens/'+id);
+}
+function resetView(){pan={x:40,y:40};sc=1;redraw();}
+function toggleGrid(){showGrid=!showGrid;var b=document.getElementById('t-grid');if(b)b.classList.toggle('active',showGrid);redraw();}
+function uploadBg(){if(isDM)document.getElementById('bfi').click();}
+function clearBg(){bgImg=null;lastBgUrl=null;redraw();if(fbOK)fbDEL('sessions/'+SID+'/bgImage');}
+function updateTB(){
+  ['sel','ping','fog','erase'].forEach(function(t){var b=document.getElementById('t-'+t);if(b)b.classList.toggle('active',tool===t);});
+  var fh=document.getElementById('fm-h'),fr=document.getElementById('fm-r');
+  if(fh)fh.classList.toggle('active',fogMode==='hide');if(fr)fr.classList.toggle('active',fogMode==='reveal');
+  refreshList();
+}
+function refreshList(){
+  var el=document.getElementById('tlist');if(!el)return;el.innerHTML='';
+  Object.keys(tokens).forEach(function(id){
+    var t=tokens[id];if(!t)return;
+    var row=document.createElement('div');row.className='tr2';
+    row.innerHTML='<span class="td2" style="background:'+t.color+'"></span><span class="tn2">'+t.name+'</span>'+(isDM?'<button class="tdl" onclick="removeToken(\''+id+'\')"><i class="ti ti-trash"></i></button>':'');
+    el.appendChild(row);
+  });
+}
+document.getElementById('bfi').addEventListener('change',function(){
+  var file=this.files[0];if(!file||!SID)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var d=e.target.result;
+    var img=new Image();img.onload=function(){bgImg=img;redraw();};img.src=d;
+    if(fbOK)fbPUT('sessions/'+SID+'/bgImage',d);
+  };
+  reader.readAsDataURL(file);this.value='';
+});
+setInterval(function(){if(Object.keys(pings).length>0)redraw();},50);
+</script>
+</body>
+</html>

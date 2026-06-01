@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trainer's Rulebook — The Frostbound Harrow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --frost:      #a8d8ea;
+      --frost-dark: #5b9bb5;
+      --ice:        #d6eef8;
+      --ghost:      #7bafc8;
+      --void:       #0d1e2b;
+      --off-white:  #172330;
+      --gray:       #7bafc8;
+      --gray-lt:    #2e4a5e;
+      --red:        #E3350D;
+      --accent:     #3a9abf;
+    }
+
+    body {
+      background: linear-gradient(175deg, #0d1e2b 0%, #0f2235 50%, #091825 100%);
+      color: var(--ice);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Snow ── */
+    .snow-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+    .snow-bg .sf {
+      position:absolute; top:-10px; border-radius:50%;
+      background:rgba(200,230,255,0.55);
+      animation:sf-fall linear infinite;
+    }
+    @keyframes sf-fall {
+      0%   { transform:translateY(-10px) translateX(0);    opacity:0; }
+      8%   { opacity:0.7; }
+      92%  { opacity:0.4; }
+      100% { transform:translateY(105vh) translateX(30px); opacity:0; }
+    }
+
+    /* ── Top stripe ── */
+    .top-stripe {
+      position:fixed; top:0; left:0; right:0; height:10px; z-index:100;
+      background: linear-gradient(90deg, #1a5f7a, #3a9abf, #1a5f7a);
+    }
+    .top-stripe::after {
+      content:''; position:absolute; bottom:-3px; left:0; right:0; height:3px;
+      background:rgba(168,216,234,0.35);
+    }
+
+    /* ── Snow toggle ── */
+    .snow-toggle {
+      position:fixed; bottom:1.2rem; right:1.2rem; z-index:200;
+      background:rgba(13,30,43,0.85);
+      border:1.5px solid rgba(168,216,234,0.3); border-radius:10px;
+      padding:6px 12px;
+      font-family:'Press Start 2P',monospace; font-size:7px;
+      color:rgba(168,216,234,0.7); cursor:pointer;
+      display:flex; align-items:center; gap:6px;
+      backdrop-filter:blur(6px); box-shadow:0 2px 12px rgba(0,0,0,0.4);
+      transition:border-color 0.15s, color 0.15s;
+    }
+    .snow-toggle:hover { border-color:rgba(168,216,234,0.6); color:rgba(168,216,234,1); }
+    .snow-toggle.snow-off { opacity:0.5; }
+
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Layout ── */
+    .layout {
+      position:relative; z-index:1;
+      display:flex; gap:0;
+      max-width:1100px; margin:0 auto;
+      padding:4rem 1rem 4rem;
+    }
+
+    /* ── Sidebar nav ── */
+    .sidebar {
+      width:220px; flex-shrink:0;
+      position:sticky; top:4rem;
+      align-self:flex-start;
+      max-height:calc(100vh - 5rem);
+      overflow-y:auto;
+      padding-right:1rem;
+      scrollbar-width:thin;
+      scrollbar-color:var(--frost-dark) transparent;
+    }
+    .sidebar::-webkit-scrollbar { width:4px; }
+    .sidebar::-webkit-scrollbar-thumb { background:var(--frost-dark); border-radius:999px; }
+
+    .sidebar-title {
+      font-family:'Press Start 2P',monospace; font-size:7px;
+      color:var(--ghost); letter-spacing:0.07em;
+      margin-bottom:0.75rem; padding-left:4px;
+    }
+
+    .nav-item {
+      display:block; padding:5px 8px; border-radius:6px;
+      font-size:11px; font-weight:700; color:var(--ghost);
+      text-decoration:none; cursor:pointer;
+      transition:background 0.12s, color 0.12s;
+      margin-bottom:2px;
+      border-left:2px solid transparent;
+    }
+    .nav-item:hover { background:rgba(168,216,234,0.07); color:var(--ice); }
+    .nav-item.active { color:var(--frost); border-left-color:var(--frost-dark); background:rgba(58,154,191,0.1); }
+    .nav-section-label {
+      font-family:'Press Start 2P',monospace; font-size:6px;
+      color:rgba(168,216,234,0.3); margin:10px 0 4px 8px;
+      letter-spacing:0.06em;
+    }
+
+    /* ── Main content ── */
+    .content {
+      flex:1; min-width:0;
+      padding-left:2rem;
+    }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom:2rem; animation:fade-up 0.5s ease both; }
+    .page-header h1 {
+      font-family:'Press Start 2P',monospace;
+      font-size:clamp(12px,2.5vw,18px);
+      color:var(--ice);
+      text-shadow:0 0 14px rgba(168,216,234,0.7), 2px 2px 0 rgba(0,20,40,0.9);
+      line-height:1.5; margin-bottom:0.5rem;
+    }
+    .page-header p { font-size:13px; color:var(--ghost); font-style:italic; }
+
+    /* ── Divider ── */
+    .dex-divider { display:flex; align-items:center; gap:10px; margin:0.75rem 0 2rem; }
+    .dex-divider-line { flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(168,216,234,0.3),transparent); }
+    .dex-divider-dot  { width:7px; height:7px; border-radius:50%; background:var(--frost-dark); border:1.5px solid var(--frost); box-shadow:0 0 5px var(--frost-dark); }
+    .dex-divider-dot.small { width:4px; height:4px; }
+
+    /* ── Rule sections ── */
+    .rule-section {
+      margin-bottom:2.5rem;
+      animation:fade-up 0.4s ease both;
+      scroll-margin-top:5rem;
+    }
+
+    .section-title {
+      font-family:'Press Start 2P',monospace;
+      font-size:clamp(9px,1.8vw,12px);
+      color:var(--frost);
+      text-shadow:0 0 10px rgba(168,216,234,0.4);
+      margin-bottom:1rem;
+      display:flex; align-items:center; gap:10px;
+    }
+    .section-title i { font-size:16px; color:var(--frost-dark); }
+    .section-title::after {
+      content:''; flex:1; height:1px;
+      background:linear-gradient(90deg,rgba(168,216,234,0.25),transparent);
+    }
+
+    /* ── Rule card ── */
+    .rule-card {
+      background:rgba(255,255,255,0.04);
+      border:1.5px solid rgba(168,216,234,0.15);
+      border-radius:12px;
+      padding:1rem 1.25rem;
+      margin-bottom:0.75rem;
+      position:relative; overflow:hidden;
+    }
+    .rule-card::before {
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+      background:var(--card-accent, var(--frost-dark));
+      border-radius:10px 0 0 10px;
+    }
+
+    .rule-card-title {
+      font-family:'Press Start 2P',monospace; font-size:8px;
+      color:var(--ice); margin-bottom:0.5rem;
+      display:flex; align-items:center; gap:8px;
+    }
+    .rule-card-title .origin-tag {
+      font-size:8px; font-weight:400; font-family:'Nunito',sans-serif;
+      color:rgba(168,216,234,0.35); font-style:italic;
+    }
+
+    .rule-card p { font-size:13px; color:var(--ghost); line-height:1.7; margin-bottom:0.5rem; }
+    .rule-card p:last-child { margin-bottom:0; }
+    .rule-card strong { color:var(--ice); font-weight:800; }
+    .rule-card em { color:var(--frost); font-style:italic; }
+
+    /* ── Formula box ── */
+    .formula {
+      background:rgba(58,154,191,0.1);
+      border:1px solid rgba(168,216,234,0.2);
+      border-radius:8px; padding:0.6rem 1rem;
+      font-family:'Press Start 2P',monospace; font-size:8px;
+      color:var(--frost); margin:0.5rem 0;
+      text-align:center; letter-spacing:0.04em;
+    }
+
+    /* ── Condition chips ── */
+    .condition-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+      gap:0.75rem;
+    }
+
+    .condition-card {
+      background:rgba(255,255,255,0.04);
+      border:1.5px solid rgba(168,216,234,0.15);
+      border-radius:10px; padding:0.85rem 1rem;
+      position:relative; overflow:hidden;
+    }
+    .condition-card::before {
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+      background:var(--cond-color, var(--frost-dark));
+      border-radius:10px 0 0 10px;
+    }
+    .condition-name {
+      font-family:'Press Start 2P',monospace; font-size:8px;
+      color:var(--ice); margin-bottom:4px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .condition-origin {
+      font-size:9px; color:rgba(168,216,234,0.3);
+      font-style:italic; font-family:'Nunito',sans-serif; font-weight:400;
+    }
+    .condition-card ul {
+      padding-left:1rem; margin-top:0.4rem;
+    }
+    .condition-card li {
+      font-size:12px; color:var(--ghost); line-height:1.6; margin-bottom:2px;
+    }
+    .condition-card li strong { color:var(--ice); }
+
+    /* ── DC table ── */
+    .dc-table {
+      width:100%; border-collapse:collapse; font-size:13px;
+      margin:0.5rem 0;
+    }
+    .dc-table th {
+      font-family:'Press Start 2P',monospace; font-size:7px;
+      color:var(--ghost); text-align:left; padding:5px 10px 8px;
+      border-bottom:1px solid rgba(168,216,234,0.2);
+    }
+    .dc-table td { padding:6px 10px; border-bottom:1px solid rgba(168,216,234,0.07); color:var(--ghost); }
+    .dc-table td:first-child { color:var(--ice); font-weight:700; }
+    .dc-table tr:last-child td { border-bottom:none; }
+    .dc-table tr:hover td { background:rgba(168,216,234,0.04); }
+
+    /* ── Skill table ── */
+    .skill-table { width:100%; border-collapse:collapse; font-size:13px; margin:0.5rem 0; }
+    .skill-table th { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--ghost); text-align:left; padding:5px 10px 8px; border-bottom:1px solid rgba(168,216,234,0.2); }
+    .skill-table td { padding:6px 10px; border-bottom:1px solid rgba(168,216,234,0.07); color:var(--ghost); }
+    .skill-table td:first-child { color:var(--ice); font-weight:700; }
+    .skill-table td:nth-child(2) { color:var(--frost-dark); font-weight:700; font-size:11px; }
+    .skill-table tr:last-child td { border-bottom:none; }
+    .skill-table tr:hover td { background:rgba(168,216,234,0.04); }
+
+    /* ── Exhaustion table ── */
+    .exhaust-table { width:100%; border-collapse:collapse; font-size:13px; margin:0.5rem 0; }
+    .exhaust-table th { font-family:'Press Start 2P',monospace; font-size:7px; color:var(--ghost); padding:5px 10px 8px; text-align:left; border-bottom:1px solid rgba(168,216,234,0.2); }
+    .exhaust-table td { padding:6px 10px; border-bottom:1px solid rgba(168,216,234,0.07); color:var(--ghost); }
+    .exhaust-table td:first-child { color:var(--frost); font-family:'Press Start 2P',monospace; font-size:8px; text-align:center; }
+    .exhaust-table tr:last-child td { border-bottom:none; }
+    .exhaust-table tr:hover td { background:rgba(168,216,234,0.04); }
+
+    /* ── Tip box ── */
+    .tip-box {
+      background:rgba(58,154,191,0.08);
+      border:1px solid rgba(168,216,234,0.2);
+      border-radius:10px; padding:0.75rem 1rem;
+      margin:0.75rem 0;
+      display:flex; gap:10px; align-items:flex-start;
+    }
+    .tip-box i { font-size:18px; color:var(--frost-dark); flex-shrink:0; margin-top:2px; }
+    .tip-box p { font-size:12px; color:var(--ghost); line-height:1.6; }
+    .tip-box strong { color:var(--ice); }
+
+    /* ── Footer ── */
+    .footer { margin-top:3rem; padding-top:1.5rem; border-top:1px solid rgba(168,216,234,0.1); font-size:11px; color:var(--ghost); text-align:center; font-style:italic; }
+    .footer strong { font-family:'Press Start 2P',monospace; font-size:8px; color:var(--frost-dark); font-style:normal; }
+
+    /* responsive */
+    @media(max-width:680px) {
+      .layout { flex-direction:column; padding-top:3.5rem; }
+      .sidebar { width:100%; position:static; max-height:none; padding-right:0; margin-bottom:1.5rem; }
+      .content { padding-left:0; }
+      .condition-grid { grid-template-columns:1fr; }
+    }
+
+    * { scrollbar-width:thin; scrollbar-color:var(--frost-dark) rgba(255,255,255,0.04); }
+  </style>
+</head>
+<body>
+
+<div class="top-stripe"></div>
+<div class="snow-bg" id="snow-bg" aria-hidden="true"></div>
+<button class="snow-toggle" id="snow-toggle" aria-label="Toggle snow">
+  <i class="ti ti-snowflake" aria-hidden="true"></i>
+  <span id="snow-toggle-label">SNOW ON</span>
+</button>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <nav class="sidebar" aria-label="Rules navigation">
+    <p class="sidebar-title">RULEBOOK</p>
+
+    <p class="nav-section-label">CORE</p>
+    <a class="nav-item" href="#ability-scores">Ability Scores</a>
+    <a class="nav-item" href="#proficiency">Proficiency Bonus</a>
+    <a class="nav-item" href="#advantage">Advantage & Disadvantage</a>
+    <a class="nav-item" href="#ability-checks">Ability Checks</a>
+    <a class="nav-item" href="#saving-throws">Saving Throws</a>
+    <a class="nav-item" href="#skills">Skills</a>
+
+    <p class="nav-section-label">COMBAT</p>
+    <a class="nav-item" href="#initiative">Initiative</a>
+    <a class="nav-item" href="#movement">Movement & Speed</a>
+    <a class="nav-item" href="#actions">Actions in Battle</a>
+    <a class="nav-item" href="#attack-rolls">Attack Rolls</a>
+    <a class="nav-item" href="#damage">Damage & Types</a>
+    <a class="nav-item" href="#cover">Cover</a>
+
+    <p class="nav-section-label">STATUS & REST</p>
+    <a class="nav-item" href="#conditions">Conditions</a>
+    <a class="nav-item" href="#exhaustion">Exhaustion</a>
+    <a class="nav-item" href="#resting">Resting</a>
+    <a class="nav-item" href="#death">Fainting & Death</a>
+  </nav>
+
+  <!-- ── CONTENT ── -->
+  <main class="content">
+
+    <div class="page-header">
+      <h1>Trainer's Rulebook</h1>
+      <p>Core D&amp;D 5e rules — reskinned for the Pokémon world</p>
+      <div class="dex-divider">
+        <div class="dex-divider-line"></div>
+        <div class="dex-divider-dot small"></div>
+        <div class="dex-divider-dot"></div>
+        <div class="dex-divider-dot small"></div>
+        <div class="dex-divider-line"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ABILITY SCORES ══════════════ -->
+    <section class="rule-section" id="ability-scores">
+      <h2 class="section-title"><i class="ti ti-chart-bar"></i>Ability Scores</h2>
+
+      <div class="rule-card" style="--card-accent:#FF9741">
+        <p class="rule-card-title">The Six Trainer Stats</p>
+        <p>Every trainer is defined by six core ability scores. These describe their natural physical and mental gifts:</p>
+        <p>
+          <strong>Strength (STR)</strong> — Raw physical power. Used for melee attacks, grappling, and breaking things.<br/>
+          <strong>Dexterity (DEX)</strong> — Agility and reflexes. Used for ranged attacks, stealth, and light armor defense.<br/>
+          <strong>Constitution (CON)</strong> — Endurance and vitality. Affects your HP and ability to resist physical hardship.<br/>
+          <strong>Intelligence (INT)</strong> — Memory, reasoning, and knowledge. Used for Pokédex recall and tactical thinking.<br/>
+          <strong>Wisdom (WIS)</strong> — Perception and instinct. Used for reading Pokémon, sensing danger, and healing.<br/>
+          <strong>Charisma (CHA)</strong> — Force of personality. Used for leadership, performance, intimidation, and Pokémon bonding.
+        </p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Ability Modifiers</p>
+        <p>Each score generates a <strong>modifier</strong> — the number you actually add to dice rolls. Scores below 10 give negative modifiers.</p>
+        <div class="formula">MODIFIER = (SCORE − 10) ÷ 2 (round down)</div>
+        <table class="dc-table">
+          <tr><th>Score</th><th>Modifier</th><th>Score</th><th>Modifier</th></tr>
+          <tr><td>1</td><td>−5</td><td>12–13</td><td>+1</td></tr>
+          <tr><td>2–3</td><td>−4</td><td>14–15</td><td>+2</td></tr>
+          <tr><td>4–5</td><td>−3</td><td>16–17</td><td>+3</td></tr>
+          <tr><td>6–7</td><td>−2</td><td>18–19</td><td>+4</td></tr>
+          <tr><td>8–9</td><td>−1</td><td>20–21</td><td>+5</td></tr>
+          <tr><td>10–11</td><td>+0</td><td>22+</td><td>+6+</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════ PROFICIENCY BONUS ══════════════ -->
+    <section class="rule-section" id="proficiency">
+      <h2 class="section-title"><i class="ti ti-award"></i>Proficiency Bonus</h2>
+
+      <div class="rule-card" style="--card-accent:#5FBD58">
+        <p class="rule-card-title">Trainer Experience Bonus</p>
+        <p>Your <strong>Proficiency Bonus</strong> represents your trainer experience — the edge you have with skills, tools, and attacks you've actually trained in. All trainers start at <strong>+2</strong> at Level 1.</p>
+        <div class="formula">LEVEL 1–4 → +2 &nbsp;|&nbsp; LEVEL 5–8 → +3 &nbsp;|&nbsp; LEVEL 9–12 → +4</div>
+        <p>You add your proficiency bonus to:</p>
+        <p>
+          — Attack rolls with weapons you're proficient with<br/>
+          — Ability checks using a skill you're proficient in<br/>
+          — Saving throws you're proficient in<br/>
+          — Spell attack rolls (if applicable)
+        </p>
+        <div class="tip-box">
+          <i class="ti ti-info-circle"></i>
+          <p><strong>You never add your proficiency bonus twice</strong> to the same roll, even if two rules say you should.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ ADVANTAGE & DISADVANTAGE ══════════════ -->
+    <section class="rule-section" id="advantage">
+      <h2 class="section-title"><i class="ti ti-arrows-sort"></i>Advantage & Disadvantage</h2>
+
+      <div class="rule-card" style="--card-accent:#F4D23C">
+        <p class="rule-card-title">Double Roll Rule</p>
+        <p>Some situations give you <strong>Advantage</strong> or <strong>Disadvantage</strong> on a roll. These represent unusually favorable or unfavorable circumstances — like a Pokémon using Double Team, or fighting in thick snowfall.</p>
+        <p><strong>Advantage:</strong> Roll two d20s and take the <em>higher</em> result.</p>
+        <p><strong>Disadvantage:</strong> Roll two d20s and take the <em>lower</em> result.</p>
+        <div class="tip-box">
+          <i class="ti ti-alert-triangle"></i>
+          <p><strong>Cancellation:</strong> If you have both Advantage and Disadvantage on the same roll (from any source), they cancel out exactly — you roll just one d20 regardless of how many sources you have of each.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ ABILITY CHECKS ══════════════ -->
+    <section class="rule-section" id="ability-checks">
+      <h2 class="section-title"><i class="ti ti-dice"></i>Ability Checks</h2>
+
+      <div class="rule-card" style="--card-accent:#FF6DA3">
+        <p class="rule-card-title">Making a Check</p>
+        <p>When the outcome of an action is uncertain, the Game Master calls for an <strong>ability check</strong>. Roll a d20, add the relevant ability modifier (and proficiency bonus if applicable), and compare to the <strong>Difficulty Class (DC)</strong>.</p>
+        <div class="formula">d20 + MODIFIER (+ PROFICIENCY if applicable) vs. DC</div>
+        <p><strong>Meet or beat the DC = success.</strong> Below the DC = failure.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Difficulty Classes</p>
+        <p>The GM sets the DC based on how hard the task is:</p>
+        <table class="dc-table">
+          <tr><th>Task Difficulty</th><th>DC</th><th>Pokémon World Example</th></tr>
+          <tr><td>Very Easy</td><td>5</td><td>Recognizing a common Pokémon type</td></tr>
+          <tr><td>Easy</td><td>10</td><td>Calming a startled Starly</td></tr>
+          <tr><td>Medium</td><td>15</td><td>Tracking Pokémon through fresh snow</td></tr>
+          <tr><td>Hard</td><td>20</td><td>Climbing a frozen cliff face at night</td></tr>
+          <tr><td>Very Hard</td><td>25</td><td>Persuading a corrupted Pokémon</td></tr>
+          <tr><td>Nearly Impossible</td><td>30</td><td>Understanding an ancient shrine glyph</td></tr>
+        </table>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#9FA19F">
+        <p class="rule-card-title">Contests</p>
+        <p>When two creatures oppose each other directly — a trainer trying to grab a Pokémon while another trainer tries to stop them — both make ability checks. The higher result wins. Ties go to the creature that initiated the contest.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ SAVING THROWS ══════════════ -->
+    <section class="rule-section" id="saving-throws">
+      <h2 class="section-title"><i class="ti ti-shield-half"></i>Saving Throws</h2>
+
+      <div class="rule-card" style="--card-accent:#D62828">
+        <p class="rule-card-title">Resisting Effects</p>
+        <p>A <strong>saving throw</strong> is a reflexive check to resist or avoid a harmful effect — a Poison Powder, a collapsing ice shelf, a psychic attack. You don't choose to make one; effects force them.</p>
+        <div class="formula">d20 + ABILITY MODIFIER (+ PROFICIENCY if proficient) vs. effect DC</div>
+        <p>Each class grants proficiency in two saving throws. Your trainer's instincts, discipline, or sheer stubbornness gives them an edge against certain effects.</p>
+        <div class="tip-box">
+          <i class="ti ti-snowflake"></i>
+          <p><strong>In the Frostbound Harrow:</strong> CON saves are common against the biting cold. WIS saves appear when the corruption spreads. Be ready for both.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ SKILLS ══════════════ -->
+    <section class="rule-section" id="skills">
+      <h2 class="section-title"><i class="ti ti-list-check"></i>Skills</h2>
+
+      <div class="rule-card" style="--card-accent:#6B4FA0">
+        <p class="rule-card-title">Trainer Skill List</p>
+        <p>Skills are specific areas of expertise tied to an ability score. If you're proficient in a skill, add your Proficiency Bonus when making that check.</p>
+        <table class="skill-table">
+          <tr><th>Skill</th><th>Ability</th><th>Pokémon World Use</th></tr>
+          <tr><td>Acrobatics</td><td>DEX</td><td>Tumbling through rocky terrain, dodging a Pokémon charge</td></tr>
+          <tr><td>Animal Handling</td><td>WIS</td><td>Calming wild Pokémon, reading a Pokémon's mood</td></tr>
+          <tr><td>Arcana</td><td>INT</td><td>Identifying move types, reading shrine inscriptions</td></tr>
+          <tr><td>Athletics</td><td>STR</td><td>Climbing, swimming, grappling, carrying heavy gear</td></tr>
+          <tr><td>Deception</td><td>CHA</td><td>Bluffing a rival trainer, feigning a Pokémon's health</td></tr>
+          <tr><td>History</td><td>INT</td><td>Knowing regional lore, ancient Pokémon legends</td></tr>
+          <tr><td>Insight</td><td>WIS</td><td>Sensing a trainer's true intent, reading a Pokémon's feelings</td></tr>
+          <tr><td>Intimidation</td><td>CHA</td><td>Forcing a retreat, causing a wild Pokémon to flee</td></tr>
+          <tr><td>Investigation</td><td>INT</td><td>Searching ruins, examining clues, studying tracks</td></tr>
+          <tr><td>Medicine</td><td>WIS</td><td>Diagnosing Pokémon illness, applying field treatment</td></tr>
+          <tr><td>Nature</td><td>INT</td><td>Identifying habitats, predicting weather, foraging</td></tr>
+          <tr><td>Perception</td><td>WIS</td><td>Spotting hidden Pokémon, hearing movement in snowfall</td></tr>
+          <tr><td>Performance</td><td>CHA</td><td>Pokémon Showcases, musical performance, storytelling</td></tr>
+          <tr><td>Persuasion</td><td>CHA</td><td>Negotiating with an NPC, convincing a frightened ally</td></tr>
+          <tr><td>Religion</td><td>INT</td><td>Knowledge of Legendary Pokémon lore and shrine rites</td></tr>
+          <tr><td>Sleight of Hand</td><td>DEX</td><td>Pickpocketing, planting items, concealing a Poké Ball</td></tr>
+          <tr><td>Stealth</td><td>DEX</td><td>Sneaking past Pokémon, moving silently in snow</td></tr>
+          <tr><td>Survival</td><td>WIS</td><td>Navigating routes, tracking Pokémon, finding shelter</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════ INITIATIVE ══════════════ -->
+    <section class="rule-section" id="initiative">
+      <h2 class="section-title"><i class="ti ti-bolt"></i>Initiative</h2>
+
+      <div class="rule-card" style="--card-accent:#F4D23C">
+        <p class="rule-card-title">Battle Order</p>
+        <p>When combat begins, everyone rolls <strong>Initiative</strong> to determine the order of turns. Roll a d20 and add your <strong>DEX modifier</strong>. Higher results act first. Ties are broken by higher DEX score, then by coin flip if still tied.</p>
+        <div class="formula">INITIATIVE = d20 + DEX MODIFIER</div>
+        <p>Initiative lasts for the entire encounter. The GM tracks the order and calls each combatant's turn when it comes around.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ MOVEMENT ══════════════ -->
+    <section class="rule-section" id="movement">
+      <h2 class="section-title"><i class="ti ti-run"></i>Movement & Speed</h2>
+
+      <div class="rule-card" style="--card-accent:#5FBD58">
+        <p class="rule-card-title">Moving on Your Turn</p>
+        <p>On each turn, you can move up to your <strong>Speed</strong> — for most trainers, that's <strong>30 feet</strong>. You can split your movement before and after your action.</p>
+        <p>Difficult terrain (deep snow, ice patches, tangled roots) costs <strong>2 feet of movement</strong> per 1 foot traveled. Climbing and swimming also typically cost extra movement unless you have a relevant ability.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Special Movement</p>
+        <p><strong>Jumping:</strong> Long jump = STR score in feet (running) or half that (standing). High jump = 3 + STR modifier in feet (running).<br/>
+        <strong>Crawling:</strong> Costs 1 extra foot per foot moved.<br/>
+        <strong>Falling:</strong> Take <strong>1d6 bludgeoning damage</strong> per 10 feet fallen (max 20d6). You land Prone.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ ACTIONS ══════════════ -->
+    <section class="rule-section" id="actions">
+      <h2 class="section-title"><i class="ti ti-sword"></i>Actions in Battle</h2>
+
+      <div class="rule-card" style="--card-accent:#D62828">
+        <p class="rule-card-title">Attack</p>
+        <p>Make one melee or ranged weapon attack (or more if your class allows multiple). Roll to hit, then roll damage on a success.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#FF9741">
+        <p class="rule-card-title">Dash</p>
+        <p>Gain extra movement equal to your Speed for this turn. Useful for closing distance or fleeing across open terrain.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#5FBD58">
+        <p class="rule-card-title">Disengage</p>
+        <p>Your movement doesn't provoke Opportunity Attacks for the rest of this turn. Use this to safely retreat from a melee Pokémon.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Dodge</p>
+        <p>Until your next turn, attacks against you are made with <strong>Disadvantage</strong> if you can see the attacker. You also have <strong>Advantage</strong> on DEX saving throws. Requires you aren't Incapacitated and still have movement speed.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#FF6DA3">
+        <p class="rule-card-title">Help</p>
+        <p>Aid another creature with a task. If helping with an attack, your ally has <strong>Advantage</strong> on their next attack against a creature within 5 ft of you. If helping with a check, your ally has Advantage on that check.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#5B5466">
+        <p class="rule-card-title">Hide</p>
+        <p>Make a <strong>Stealth check</strong> to conceal yourself. You must be out of clear sight. If you succeed, you are Hidden — attackers have Disadvantage to hit you, and you have Advantage on your first attack from hiding.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#6B4FA0">
+        <p class="rule-card-title">Ready</p>
+        <p>Prepare an action to trigger on a specific condition: <em>"When the Snover charges, I fire my bow."</em> Specify both the trigger and the action. If the trigger occurs before your next turn, you use your Reaction to perform the action.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#9FA19F">
+        <p class="rule-card-title">Search</p>
+        <p>Devote your attention to finding something — a hidden Pokémon, a concealed trap, or a clue. Make a <strong>Perception or Investigation check</strong> (GM decides which).</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#A38C21">
+        <p class="rule-card-title">Use an Object</p>
+        <p>Use a Potion, throw a Poké Ball, activate a special item. Normally interacting with one object is free during movement; a second requires this action.</p>
+      </div>
+
+      <div class="tip-box">
+        <i class="ti ti-info-circle"></i>
+        <p>You also have a <strong>Bonus Action</strong> and a <strong>Reaction</strong> each round, granted by specific class features, spells, or situations. Your <strong>Reaction</strong> recharges at the start of each of your turns.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ ATTACK ROLLS ══════════════ -->
+    <section class="rule-section" id="attack-rolls">
+      <h2 class="section-title"><i class="ti ti-target"></i>Attack Rolls</h2>
+
+      <div class="rule-card" style="--card-accent:#D62828">
+        <p class="rule-card-title">Hitting Your Target</p>
+        <p>Roll a d20 and add your attack bonus. If the total meets or beats the target's <strong>Armor Class (AC)</strong>, the attack hits.</p>
+        <div class="formula">d20 + ABILITY MOD + PROFICIENCY BONUS vs. TARGET AC</div>
+        <p>Use <strong>STR</strong> for melee weapons, <strong>DEX</strong> for ranged weapons. Finesse weapons (like rapiers) let you choose either.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#F4D23C">
+        <p class="rule-card-title">Critical Hits & Misses</p>
+        <p><strong>Natural 20 (Critical Hit):</strong> Automatically hits, regardless of AC. Roll all damage dice twice and add modifiers once.</p>
+        <p><strong>Natural 1 (Critical Miss):</strong> Automatically misses, regardless of bonuses. No damage is dealt.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#9FA19F">
+        <p class="rule-card-title">Ranged Attacks</p>
+        <p>Ranged weapons have two range values (e.g., <em>80/320 ft</em>). Within normal range: no penalty. Beyond normal range but within long range: <strong>Disadvantage</strong>. Beyond long range: impossible.</p>
+        <p>Firing while a hostile creature is within 5 ft of you also causes <strong>Disadvantage</strong> — it's hard to aim when something's biting your arm.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ DAMAGE ══════════════ -->
+    <section class="rule-section" id="damage">
+      <h2 class="section-title"><i class="ti ti-flame"></i>Damage & Types</h2>
+
+      <div class="rule-card" style="--card-accent:#FF9741">
+        <p class="rule-card-title">Dealing Damage</p>
+        <p>On a hit, roll the weapon's damage dice and add your ability modifier (STR for melee, DEX for ranged/finesse). On a Critical Hit, roll the damage dice twice.</p>
+        <div class="formula">DAMAGE = DICE ROLL + ABILITY MODIFIER</div>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Damage Types</p>
+        <p>All damage has a type. Some creatures and armors have <strong>Resistance</strong> (half damage) or <strong>Immunity</strong> (no damage) to specific types. A few things can cause <strong>Vulnerability</strong> (double damage).</p>
+        <table class="dc-table">
+          <tr><th>Damage Type</th><th>Pokémon World Flavor</th></tr>
+          <tr><td>Bludgeoning</td><td>Bodily impacts — Machamp punches, rockslides, warhammers</td></tr>
+          <tr><td>Piercing</td><td>Fangs, spines, arrows, Beedrill stingers</td></tr>
+          <tr><td>Slashing</td><td>Claws, blades, Scyther wings</td></tr>
+          <tr><td>Fire</td><td>Flamethrower, Ember, Kindler torches</td></tr>
+          <tr><td>Cold</td><td>Blizzard, Ice Beam, frostbite, the Harrow's storms</td></tr>
+          <tr><td>Lightning</td><td>Thunderbolt, Spark, Pikachu attacks</td></tr>
+          <tr><td>Acid</td><td>Sludge Bomb, Acid, Tentacruel venom</td></tr>
+          <tr><td>Poison</td><td>Toxic spores, Weezing gas, Croagunk toxin</td></tr>
+          <tr><td>Psychic</td><td>Psybeam, Confusion, Seer mental attacks</td></tr>
+          <tr><td>Radiant</td><td>Sacred shrine energy, holy incense, light-type effects</td></tr>
+          <tr><td>Necrotic</td><td>Life-draining effects, corruption, shadow energy</td></tr>
+          <tr><td>Force</td><td>Pure magical energy — rare and hard to resist</td></tr>
+          <tr><td>Thunder</td><td>Raw sonic force — Exploud screams, Hyper Voice</td></tr>
+        </table>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#5FBD58">
+        <p class="rule-card-title">Healing</p>
+        <p>Healing restores HP up to your maximum. You can't be healed above your max HP by normal means. A creature at 0 HP is <strong>Unconscious</strong> (fainted).</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ COVER ══════════════ -->
+    <section class="rule-section" id="cover">
+      <h2 class="section-title"><i class="ti ti-shield"></i>Cover</h2>
+
+      <div class="rule-card" style="--card-accent:#5B5466">
+        <p class="rule-card-title">Hiding Behind Terrain</p>
+        <table class="dc-table">
+          <tr><th>Cover Type</th><th>Benefit</th><th>Example</th></tr>
+          <tr><td>Half Cover</td><td>+2 AC and DEX saves</td><td>Behind a boulder, low wall, or snowdrift</td></tr>
+          <tr><td>Three-Quarters Cover</td><td>+5 AC and DEX saves</td><td>Behind a narrow tree or dense foliage</td></tr>
+          <tr><td>Full Cover</td><td>Can't be targeted directly</td><td>Completely behind a solid wall or ice barrier</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════ CONDITIONS ══════════════ -->
+    <section class="rule-section" id="conditions">
+      <h2 class="section-title"><i class="ti ti-alert-circle"></i>Conditions</h2>
+      <p style="font-size:13px;color:var(--ghost);margin-bottom:1rem;">Status effects that alter what a creature can do. Most end on their own or with specific treatment. Pokémon-world flavor shown in <em>italics</em>.</p>
+
+      <div class="condition-grid">
+
+        <div class="condition-card" style="--cond-color:#9FA19F">
+          <p class="condition-name">Blinded <span class="condition-origin">— "Flash'd"</span></p>
+          <ul>
+            <li>Can't see; automatically fails checks requiring sight</li>
+            <li>Attack rolls against the creature have <strong>Advantage</strong></li>
+            <li>The creature's attack rolls have <strong>Disadvantage</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#FF6DA3">
+          <p class="condition-name">Charmed <span class="condition-origin">— "Attracted"</span></p>
+          <ul>
+            <li>Can't attack the charmer or target them with harmful effects</li>
+            <li>The charmer has <strong>Advantage</strong> on CHA checks against the creature</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#D62828">
+          <p class="condition-name">Frightened <span class="condition-origin">— "Spooked"</span></p>
+          <ul>
+            <li><strong>Disadvantage</strong> on checks and attack rolls while the source of fear is in sight</li>
+            <li>Can't willingly move closer to the source of fear</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#8CB230">
+          <p class="condition-name">Grappled <span class="condition-origin">— "Trapped"</span></p>
+          <ul>
+            <li>Speed becomes 0; can't benefit from speed bonuses</li>
+            <li>Ends if the grappler is Incapacitated, or if the creature escapes (Athletics/Acrobatics vs. grappler's Athletics)</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#5B5466">
+          <p class="condition-name">Incapacitated <span class="condition-origin">— "Stunned"</span></p>
+          <ul>
+            <li>Can't take actions or reactions</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#6B4FA0">
+          <p class="condition-name">Invisible <span class="condition-origin">— "Vanished"</span></p>
+          <ul>
+            <li>Impossible to see without special senses</li>
+            <li>Attacks against the creature have <strong>Disadvantage</strong></li>
+            <li>The creature's attacks have <strong>Advantage</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#3B9DD4">
+          <p class="condition-name">Paralyzed <span class="condition-origin">— "Badly Paralyzed"</span></p>
+          <ul>
+            <li>Incapacitated; can't move or speak</li>
+            <li>Automatically fails STR and DEX saves</li>
+            <li>Attacks against the creature have <strong>Advantage</strong></li>
+            <li>Any hit within 5 ft is a <strong>Critical Hit</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#A38C21">
+          <p class="condition-name">Petrified <span class="condition-origin">— "Stoned"</span></p>
+          <ul>
+            <li>Transformed into solid matter; incapacitated and can't move or speak</li>
+            <li>Weight increases tenfold; immune to poison and disease (but existing ones are suspended)</li>
+            <li><strong>Advantage</strong> on attack rolls against the creature; auto-fails STR and DEX saves</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#9B5FC0">
+          <p class="condition-name">Poisoned <span class="condition-origin">— "Badly Poisoned"</span></p>
+          <ul>
+            <li><strong>Disadvantage</strong> on attack rolls and ability checks</li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#74CEC0">
+          <p class="condition-name">Prone <span class="condition-origin">— "Knocked Down"</span></p>
+          <ul>
+            <li>Only movement option is to crawl (costs 1 extra foot per foot) or stand up (costs half Speed)</li>
+            <li><strong>Disadvantage</strong> on attack rolls</li>
+            <li>Melee attacks against the creature have <strong>Advantage</strong>; ranged attacks have <strong>Disadvantage</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#8CB230">
+          <p class="condition-name">Restrained <span class="condition-origin">— "Bound"</span></p>
+          <ul>
+            <li>Speed becomes 0</li>
+            <li><strong>Disadvantage</strong> on attack rolls and DEX saves</li>
+            <li>Attacks against the creature have <strong>Advantage</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#F4D23C">
+          <p class="condition-name">Stunned <span class="condition-origin">— "Dazed"</span></p>
+          <ul>
+            <li>Incapacitated; can't move; can speak only falteringly</li>
+            <li>Automatically fails STR and DEX saves</li>
+            <li>Attacks against the creature have <strong>Advantage</strong></li>
+          </ul>
+        </div>
+
+        <div class="condition-card" style="--cond-color:#5B5466">
+          <p class="condition-name">Unconscious <span class="condition-origin">— "Fainted"</span></p>
+          <ul>
+            <li>Incapacitated; can't move or speak; unaware of surroundings</li>
+            <li>Drops held items; falls Prone</li>
+            <li>Automatically fails STR and DEX saves</li>
+            <li>Attacks against the creature have <strong>Advantage</strong></li>
+            <li>Any hit within 5 ft is a <strong>Critical Hit</strong></li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════ EXHAUSTION ══════════════ -->
+    <section class="rule-section" id="exhaustion">
+      <h2 class="section-title"><i class="ti ti-zzz"></i>Exhaustion</h2>
+
+      <div class="rule-card" style="--card-accent:#FF9741">
+        <p class="rule-card-title">Trainer Fatigue</p>
+        <p>Exhaustion accumulates from forced marching, starvation, extreme cold, and certain effects. It has 6 levels — level 6 is death. Each Long Rest removes <strong>one</strong> level of exhaustion.</p>
+        <table class="exhaust-table">
+          <tr><th>Level</th><th>Effect</th></tr>
+          <tr><td>1</td><td>Disadvantage on all ability checks</td></tr>
+          <tr><td>2</td><td>Speed halved</td></tr>
+          <tr><td>3</td><td>Disadvantage on attack rolls and saving throws</td></tr>
+          <tr><td>4</td><td>HP maximum halved</td></tr>
+          <tr><td>5</td><td>Speed reduced to 0</td></tr>
+          <tr><td>6</td><td>Death</td></tr>
+        </table>
+        <div class="tip-box">
+          <i class="ti ti-snowflake"></i>
+          <p><strong>Cold weather:</strong> Without proper gear, a trainer may need to make a DC 10 CON save each hour in extreme cold or gain a level of Exhaustion. The Harrow is not forgiving.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ RESTING ══════════════ -->
+    <section class="rule-section" id="resting">
+      <h2 class="section-title"><i class="ti ti-moon"></i>Resting</h2>
+
+      <div class="rule-card" style="--card-accent:#3B9DD4">
+        <p class="rule-card-title">Short Rest — "Catching Your Breath"</p>
+        <p>A period of at least <strong>1 hour</strong> of downtime. You can eat, tend wounds, and let your Pokémon recover slightly. During a Short Rest you may spend <strong>Hit Dice</strong> to recover HP:</p>
+        <div class="formula">SPEND 1 HIT DIE → roll it + CON MOD → regain that many HP</div>
+        <p>You have a number of Hit Dice equal to your level. Spent Hit Dice are recovered on a Long Rest (regain half your total, rounded up).</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#5FBD58">
+        <p class="rule-card-title">Long Rest — "Setting Up Camp"</p>
+        <p>At least <strong>8 hours</strong> of rest, including at least 6 hours of sleep. You must have at least 1 HP to benefit. After a Long Rest:</p>
+        <p>
+          — Regain all lost HP<br/>
+          — Regain spent Hit Dice (up to half your total, minimum 1)<br/>
+          — Remove 1 level of Exhaustion<br/>
+          — Restore class resources (spell slots, etc.)
+        </p>
+        <div class="tip-box">
+          <i class="ti ti-alert-triangle"></i>
+          <p>You can only benefit from one Long Rest per 24 hours. Interruptions of 1+ hour of strenuous activity reset the rest.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ DEATH & DYING ══════════════ -->
+    <section class="rule-section" id="death">
+      <h2 class="section-title"><i class="ti ti-heart-broken"></i>Fainting & Death</h2>
+
+      <div class="rule-card" style="--card-accent:#D62828">
+        <p class="rule-card-title">Dropping to 0 HP — "Fainted"</p>
+        <p>When your HP reaches 0, you fall Unconscious. You are now <strong>dying</strong>. Each turn you are dying, you make a <strong>Death Saving Throw</strong>:</p>
+        <div class="formula">Roll d20 — 10 or higher = Success &nbsp;|&nbsp; 9 or lower = Failure</div>
+        <p>
+          — <strong>3 successes:</strong> You become <em>Stable</em> (unconscious but no longer dying)<br/>
+          — <strong>3 failures:</strong> You die<br/>
+          — <strong>Natural 20:</strong> You regain 1 HP and regain consciousness<br/>
+          — <strong>Natural 1:</strong> Counts as <em>two</em> failures<br/>
+          — <strong>Taking damage at 0 HP:</strong> Counts as one failure. A Critical Hit counts as two.
+        </p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#9FA19F">
+        <p class="rule-card-title">Stabilizing a Downed Trainer</p>
+        <p>A creature that reaches you can use their <strong>Action</strong> to attempt a <strong>DC 10 Medicine check</strong> to stabilize you. Success means you stop making Death Saves and remain unconscious.</p>
+        <p>A Healer's Pouch, Hyper Potion, or magical healing also stabilizes and may restore HP immediately.</p>
+      </div>
+
+      <div class="rule-card" style="--card-accent:#5B5466">
+        <p class="rule-card-title">Instant Death</p>
+        <p>If damage reduces you to 0 HP and there is remaining damage equal to or greater than your <strong>HP maximum</strong>, you die instantly — no Death Saving Throws.</p>
+        <div class="tip-box">
+          <i class="ti ti-snowflake"></i>
+          <p><strong>In the Frostbound Harrow:</strong> The cold and the corruption are real threats. Keep your HP up and your Healer's Pouch close.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer"><strong>v0.1.0</strong> &nbsp;·&nbsp; <span id="footer-tagline"></span></p>
+
+  </main>
+</div>
+
+<script>
+  // ── Snow ──
+  (function() {
+    var layer = document.getElementById('snow-bg');
+    for (var i = 0; i < 30; i++) {
+      var f = document.createElement('div');
+      f.className = 'sf';
+      var sz = 1.2 + Math.random() * 2.5;
+      f.style.left = Math.random() * 100 + 'vw';
+      f.style.width  = sz + 'px';
+      f.style.height = sz + 'px';
+      f.style.animationDuration = (14 + Math.random() * 22) + 's';
+      f.style.animationDelay   = -(Math.random() * 30) + 's';
+      layer.appendChild(f);
+    }
+    var btn = document.getElementById('snow-toggle');
+    var lbl = document.getElementById('snow-toggle-label');
+    var on  = true;
+    try { on = localStorage.getItem('pd_snow') !== 'off'; } catch(e) {}
+    function apply(val) {
+      on = val;
+      layer.style.display = val ? '' : 'none';
+      lbl.textContent = val ? 'SNOW ON' : 'SNOW OFF';
+      btn.classList.toggle('snow-off', !val);
+      try { localStorage.setItem('pd_snow', val ? 'on' : 'off'); } catch(e) {}
+    }
+    apply(on);
+    btn.addEventListener('click', function() { apply(!on); });
+  })();
+
+  // ── Taglines ──
+  (function() {
+    var taglines = [
+      "The cold never sleeps.",
+      "Even Magikarp fear what stirs beneath the ice.",
+      "Something ancient has been woken. It is not happy.",
+      "Roll for Sanity. Fail for flavor.",
+      "Your starter is scared. You should be too.",
+      "Not all blizzards are natural.",
+      "The cult thought they were in control. They were wrong.",
+      "It's a Pokemon world. The horror is optional.",
+      "Somewhere in the snow, something remembers your name.",
+      "Pack a Burn Heal. You won't need it.",
+      "The storm doesn't end. It spreads.",
+      "The Pokedex has no entry for what's coming.",
+      "Gotta roll 'em all!",
+      "The journey of a thousand miles begins with a single Poke Ball.",
+      "Every trainer was a Village Sprout once. Some still are.",
+      "Your Pokemon believe in you. That has to count for something.",
+      "Adventure is out there - and it brought snacks!"
+    ];
+    var el = document.getElementById('footer-tagline');
+    if (el) el.textContent = taglines[Math.floor(Math.random() * taglines.length)];
+  })();
+
+  // ── Active sidebar nav on scroll ──
+  (function() {
+    var sections = document.querySelectorAll('.rule-section');
+    var navItems = document.querySelectorAll('.nav-item');
+    function onScroll() {
+      var scrollY = window.scrollY + 120;
+      var current = '';
+      sections.forEach(function(s) {
+        if (s.offsetTop <= scrollY) current = s.id;
+      });
+      navItems.forEach(function(n) {
+        n.classList.toggle('active', n.getAttribute('href') === '#' + current);
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    // Smooth scroll on nav click
+    navItems.forEach(function(n) {
+      n.addEventListener('click', function(e) {
+        e.preventDefault();
+        var target = document.querySelector(n.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
